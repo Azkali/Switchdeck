@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Steam install script for Nintendo Switch 1 (l4t) by Sildur
+# Steam install script for ARM64 Linux devices by Sildur, adjusted by Azkali
 
 set -euo pipefail
 
@@ -74,28 +74,6 @@ if [ ! -x "$RTARM64ROOT/pv-runtime/steam-runtime-steamrt-arm64" ]; then
 	rm -rf "$RTARM64ROOT/pv-runtime/steam-runtime-steamrt-arm64.tar.xz"
 fi
 
-if [ ! -d "$STEAMROOT/compatibilitytools.d/SteamLinuxRuntime_sniper" ]; then
-	echo "Downloading sniper_x86-64-runtime.."
-	mkdir -p "$STEAMROOT/compatibilitytools.d/"
-	wget -q --show-progress -c -t 5 -O "$STEAMROOT/compatibilitytools.d/SteamLinuxRuntime_sniper.tar.xz" "https://repo.steampowered.com/steamrt3/images/latest-container-runtime-public-beta/SteamLinuxRuntime_sniper.tar.xz" || exit_on_error "sniper_x86-64 runtime download failed (check your internet connection)"
-	tar -xf "$STEAMROOT/compatibilitytools.d/SteamLinuxRuntime_sniper.tar.xz" --directory "$STEAMROOT/compatibilitytools.d" --checkpoint=500 --checkpoint-action=dot
-    rm -rf "$STEAMROOT/compatibilitytools.d/SteamLinuxRuntime_sniper.tar.xz"
-fi
-
-if [ ! -d "$STEAMROOT/Switchdeck" ]; then
-    echo "Downloading DXVK-Sarek.."
-    mkdir -p "$STEAMROOT/Switchdeck"
-    SAR_URL=$(wget -qO- "https://api.github.com/repos/pythonlover02/DXVK-Sarek/releases/latest" | grep -Po '"browser_download_url": "\K.*?(?=")' | head -1)
-    
-    wget -q --show-progress -c -t 5 -O "$STEAMROOT/sarek.tar.gz" "$SAR_URL" || exit_on_error "DXVK-Sarek download failed"
-    tar -xf "$STEAMROOT/sarek.tar.gz" --directory "$STEAMROOT/Switchdeck" --strip-components=1 --checkpoint=100 --checkpoint-action=dot
-    rm -rf "$STEAMROOT/sarek.tar.gz"
-    
-    # Create version file for the update script
-    echo "$SAR_URL" | grep -Po 'v\d+\.\d+\.\d+' > "$STEAMROOT/Switchdeck/dxvk-sarek_version.txt"
-    echo "DXVK-Sarek installed successfully."
-fi
-
 # Fix controller permissions
 if [ ! -w /dev/uinput ]; then
     echo "Configuring controller permissions..(Requires sudo)"
@@ -112,40 +90,19 @@ if [ -x "$RTARM64ROOT/steam" ]; then
     echo "Starting Steam (Initial Update phase)..."
     export LD_LIBRARY_PATH="$RTARM64ROOT:${LD_LIBRARY_PATH-}"
     "$RTARM64ROOT/steam" "$@" || true
-    
-    echo "Steam exited. Downloading files to downgrade steam.."
 
-    # temp dir for extraction
+	# temp dir for extraction
     TEMP_SD="$STEAMROOT/temp_sd"
     mkdir -p "$TEMP_SD"
-
-	wget -q -t 5 -O- "https://github.com/SildurFX/Switchdeck/archive/refs/heads/main.tar.gz" | tar xz -C "$TEMP_SD" --strip-components=1 || exit_on_error "Failed to download/extract downgrade files"
-
-    if [ -f "$TEMP_SD/files/downgrade/linuxarm64.tar.gz" ]; then
-        mkdir -p "$STEAMROOT/linuxarm64"
-        tar -xzf "$TEMP_SD/files/downgrade/linuxarm64.tar.gz" -C "$STEAMROOT/linuxarm64"
-    fi
-
-    # Reassemble and extract steamrtarm64
-    if [ -f "$TEMP_SD/files/downgrade/steamrtarm64.tar.gz.partaa" ]; then
-        mkdir -p "$STEAMROOT/steamrtarm64"
-        cat "$TEMP_SD/files/downgrade/steamrtarm64.tar.gz.part"* > "$TEMP_SD/steamrtarm64.tar.gz"
-        tar -xzf "$TEMP_SD/steamrtarm64.tar.gz" -C "$STEAMROOT/steamrtarm64"
-        rm -f "$TEMP_SD/steamrtarm64.tar.gz"
-    fi
+	wget -q -t 5 -O- "https://github.com/Azkali/Switchdeck/archive/refs/heads/main.tar.gz" | tar xz -C "$TEMP_SD" --strip-components=1 || exit_on_error "Failed to download/extract downgrade files"
 
     # move files and scripts
-    cp -f  "$TEMP_SD/files/downgrade/steam.cfg" "$STEAMROOT/steam.cfg"
     cp -f  "$TEMP_SD/files/steam/launch-steam.sh" "$STEAMROOT/"
-    cp -f  "$TEMP_SD/files/steam/launch-steamRT3.sh" "$STEAMROOT/"
-    cp -f  "$TEMP_SD/files/steam/update-switchdeck.sh" "$STEAMROOT/"
-    mkdir -p "$STEAMROOT/compatibilitytools.d"
-    cp -rf "$TEMP_SD/files/steam/compatibilitytools.d/." "$STEAMROOT/compatibilitytools.d/"
 
     # Cleanup
     rm -rf "$TEMP_SD"
 
-    # Overkill but make sure everything is executable
+	# Overkill but make sure everything is executable
 	chmod -R +x "$STEAMROOT"
 
     echo "Launching Steam"
