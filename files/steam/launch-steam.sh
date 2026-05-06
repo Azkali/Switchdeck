@@ -16,10 +16,6 @@
 
 STEAMDECK_MODE="true"                   # Toggle steamdeck / big picture mode for steam.
 
-# Proton-CachyOS:
-export PROTON_USE_WOW64=1               # Use wow64 mode
-export PROTON_DXVK_SAREK=1              # Use the dxvk-sarek fork as DXVK replacement for older GPUs that don't support Vulkan 1.3 (supports Vulkan 1.1+)
-
 # Wine:
 export WINEESYNC=0                      # Supported but crashes dxvk and only works with wined3d
 export PROTON_NO_ESYNC=1                # set WINEESYNC=1 and PROTON_NO_ESYNC=0 to enable esync
