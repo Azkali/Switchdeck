@@ -14,7 +14,7 @@
 
 ########################################################################################################################################
 
-STEAMDECK_MODE="false"                  # Toggle steamdeck / big picture mode for steam.
+STEAMDECK_MODE="true"                   # Toggle steamdeck / big picture mode for steam.
 
 # Proton-CachyOS:
 export PROTON_USE_WOW64=1               # Use wow64 mode
@@ -63,7 +63,6 @@ STEAM_FLAGS+=" -cef-disable-seccomp-sandbox" # Disables CEF seccomp-bpf sandbox 
 # STEAM_FLAGS+=" -dev"
 
 if [ "$STEAMDECK_MODE" = "true" ]; then
-STEAM_FLAGS+=" -720p"                   # Run tenfoot (big picture) in 720p rather than 1080p
 STEAM_FLAGS+=" -steampal"               # internal codename for the Steam Deck hardware. Enables Steam Deck hardware-specific menu options.
 STEAM_FLAGS+=" -gamepadui"              # Start in gamepadui mode (same as tenfoot)
 STEAM_FLAGS+=" -steamdeck"              # Pretend to be a steamdeck.
@@ -98,25 +97,6 @@ export TEXTDOMAINDIR=/usr/share/locale
 MAGIC_RESTART_EXITCODE=42
 STEAMROOT="$HOME/.local/share/Steam"
 STEAMHOME="$HOME/.steam"
-SWITCHDECK_DIR="$STEAMROOT/Switchdeck"
-
-if [ -d "$SWITCHDECK_DIR/x64" ]; then
-    for p in "$STEAMROOT/steamapps/common"/Proton*/files; do
-        [ -d "$p" ] || continue
-        P64="$p/lib/wine/dxvk/x86_64-windows"
-        P32="$p/lib/wine/dxvk/i386-windows"
-
-        if [ ! -L "$P64/d3d11.dll" ]; then
-            log "DXVK-Sarek not found in $(basename "$(dirname "$p")").. patching"
-            mkdir -p "$P64" "$P32"
-            for f in "$SWITCHDECK_DIR/x64"/*.dll; do ln -sf "$f" "$P64/${f##*/}"; done
-            for f in "$SWITCHDECK_DIR/x32"/*.dll; do ln -sf "$f" "$P32/${f##*/}"; done
-            log "Done!"
-        fi
-    done
-else
-    log "DXVK-Sarek source missing. Run update-switchdeck.sh"
-fi
 
 if [ ! -f "$STEAMROOT/.switchdeck-initial-launch" ]; then
 	log "creating initial symlinks"
@@ -156,8 +136,6 @@ EOF
     chmod +x "$DESKTOP_FILE"
     ln -fs "$DESKTOP_FILE" "$DESKTOP_DIR/Steam.desktop"
     update-desktop-database "$MENU_DIR" 2>/dev/null
-
-	touch "$STEAMROOT/.switchdeck-initial-launch"
 fi
 
 function has_beta_optin()
@@ -186,8 +164,7 @@ if has_beta_optin; then
         log "Starting Steam"
 		# Flat ARM64 -> Nested ARM64 -> Flat x64 -> Nested x64
 		_rtarm=$(ls -d "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt-arm64"/steamrt3c_platform_*/files 2>/dev/null | head -1)
-		_rtx64=$(ls -d "$STEAMROOT/steamrt64/pv-runtime/steam-runtime-steamrt"/steamrt3c_platform_*/files 2>/dev/null | head -1)
-		export LD_LIBRARY_PATH="$STEAMROOT/steamrtarm64${_rtarm:+:$_rtarm/lib/aarch64-linux-gnu:$_rtarm/lib}:$STEAMROOT/steamrt64${_rtx64:+:$_rtx64/lib/x86_64-linux-gnu:$_rtx64/lib}:${LD_LIBRARY_PATH-}"
+		export LD_LIBRARY_PATH="$STEAMROOT/steamrtarm64${_rtarm:+:$_rtarm/lib/aarch64-linux-gnu:$_rtarm/lib}:${LD_LIBRARY_PATH-}"
 
 		"$STEAMROOT/steamrtarm64/steam" "$@" $STEAM_FLAGS
 		#strace -osteam.s.log -ff -e trace=file -e trace=execve -s 1000 --no-abbrev "$STEAMROOT/steamrtarm64/steam" "$@"
