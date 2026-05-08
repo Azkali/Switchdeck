@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-# Steam install script for Nintendo Switch 1 (l4t) by Sildur
+# Switchdeck by SildurFX | https://github.com/SildurFX/Switchdeck
+# License: GPLv3
 
 set -euo pipefail
 
@@ -74,14 +75,6 @@ if [ ! -x "$RTARM64ROOT/pv-runtime/steam-runtime-steamrt-arm64" ]; then
 	rm -rf "$RTARM64ROOT/pv-runtime/steam-runtime-steamrt-arm64.tar.xz"
 fi
 
-if [ ! -d "$STEAMROOT/compatibilitytools.d/SteamLinuxRuntime_sniper" ]; then
-	echo "Downloading sniper_x86-64-runtime.."
-	mkdir -p "$STEAMROOT/compatibilitytools.d/"
-	wget -q --show-progress -c -t 5 -O "$STEAMROOT/compatibilitytools.d/SteamLinuxRuntime_sniper.tar.xz" "https://repo.steampowered.com/steamrt3/images/latest-container-runtime-public-beta/SteamLinuxRuntime_sniper.tar.xz" || exit_on_error "sniper_x86-64 runtime download failed (check your internet connection)"
-	tar -xf "$STEAMROOT/compatibilitytools.d/SteamLinuxRuntime_sniper.tar.xz" --directory "$STEAMROOT/compatibilitytools.d" --checkpoint=500 --checkpoint-action=dot
-    rm -rf "$STEAMROOT/compatibilitytools.d/SteamLinuxRuntime_sniper.tar.xz"
-fi
-
 if [ ! -d "$STEAMROOT/Switchdeck" ]; then
     echo "Downloading DXVK-Sarek.."
     mkdir -p "$STEAMROOT/Switchdeck"
@@ -137,10 +130,7 @@ if [ -x "$RTARM64ROOT/steam" ]; then
     # move files and scripts
     cp -f  "$TEMP_SD/files/downgrade/steam.cfg" "$STEAMROOT/steam.cfg"
     cp -f  "$TEMP_SD/files/steam/launch-steam.sh" "$STEAMROOT/"
-    cp -f  "$TEMP_SD/files/steam/launch-steamRT3.sh" "$STEAMROOT/"
     cp -f  "$TEMP_SD/files/steam/update-switchdeck.sh" "$STEAMROOT/"
-    mkdir -p "$STEAMROOT/compatibilitytools.d"
-    cp -rf "$TEMP_SD/files/steam/compatibilitytools.d/." "$STEAMROOT/compatibilitytools.d/"
 
     # Cleanup
     rm -rf "$TEMP_SD"

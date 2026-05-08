@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Switchdeck by SildurFX | https://github.com/SildurFX/Switchdeck
+# License: GPLv3
+
 set -o pipefail
 shopt -s failglob
 set -u
@@ -25,9 +28,8 @@ fi
 
 echo "Checking for script updates.."
 wget -t 5 -N -P "$STEAMROOT" "https://raw.githubusercontent.com/SildurFX/Switchdeck/refs/heads/main/files/steam/launch-steam.sh"
-wget -t 5 -N -P "$STEAMROOT" "https://raw.githubusercontent.com/SildurFX/Switchdeck/refs/heads/main/files/steam/launch-steamRT3.sh"
 wget -t 5 -N -P "$STEAMROOT" "https://raw.githubusercontent.com/SildurFX/Switchdeck/refs/heads/main/files/steam/update-switchdeck.sh"
-chmod +x "$STEAMROOT/launch-steam.sh" "$STEAMROOT/launch-steamRT3.sh" "$STEAMROOT/update-switchdeck.sh"
+chmod +x "$STEAMROOT/launch-steam.sh" "$STEAMROOT/update-switchdeck.sh"
 
 # Restart if update-switchdeck.sh was updated
 if [[ "$STEAMROOT/update-switchdeck.sh" -nt "$0" ]]; then
@@ -61,29 +63,32 @@ if [ "$LATEST_TAG" != "$(cat "$VERSION_FILE" 2>/dev/null)" ]; then
     rm temp.tar.gz
 fi
 
-read -p "Would you like to update Steam? (y/N): " choice
-case "$choice" in 
-    [yY][eE][sS]|[yY]) 
-    echo "Updating Steam.."
-    # use steamrt3 and x64 client to update steam
-    touch "$STEAMROOT/.steam-enable-steamrt64-client"
-    mv -f "$STEAMROOT/steam.cfg" "$STEAMROOT/steam.cfg.downgrade"
-    mv -f "$STEAMROOT/linuxarm64" "$STEAMROOT/linuxarm64-downgrade"
-    mv -f "$STEAMROOT/steamrtarm64" "$STEAMROOT/steamrtarm64-downgrade"
+read -p "Update Steam? (y/N): " choice
+[[ "$choice" =~ ^[yY] ]] || { echo "Skipping"; exit; }
+echo "Updating Steam.."
+mv -f "$STEAMROOT/steam.cfg" "$STEAMROOT/steam.cfg.bak"
+mv -f "$STEAMROOT/linuxarm64" "$STEAMROOT/linuxarm64.bak"
+mv -f "$STEAMROOT/steamrtarm64" "$STEAMROOT/steamrtarm64.bak"
 
-    "$STEAMROOT/steamrt64/steam" -forcesteamupdate -forcepackagedownload -exitsteam & wait $!
+# Point LD_LIBRARY_PATH to the .bak location
+_rtarm=$(ls -d "$STEAMROOT/steamrtarm64.bak/pv-runtime/steam-runtime-steamrt-arm64"/steamrt3c_platform_*/files 2>/dev/null | head -1)
+export LD_LIBRARY_PATH="$STEAMROOT/steamrtarm64.bak${_rtarm:+:$_rtarm/lib/aarch64-linux-gnu:$_rtarm/lib}:${LD_LIBRARY_PATH-}"
 
-    echo "Downgrading arm64 client.."
-    rm -f "$STEAMROOT/.steam-enable-steamrt64-client"
-    mv -f "$STEAMROOT/steam.cfg.downgrade" "$STEAMROOT/steam.cfg"
-    mv -f "$STEAMROOT/linuxarm64-downgrade" "$STEAMROOT/linuxarm64"
-    mv -f "$STEAMROOT/steamrtarm64-downgrade" "$STEAMROOT/steamrtarm64"
+# Run updater from the .bak folder
+"$STEAMROOT/steamrtarm64.bak/steam" -forcesteamupdate -forcepackagedownload -exitsteam & wait $!
 
-    chmod -R +x "$STEAMROOT/linuxarm64" "$STEAMROOT/steamrtarm64"
-    echo "Switchdeck update complete!"
-;;
-*)
-    echo "Skipping Steam updates"
-    exit
-;;
-esac
+echo "Merging binaries.."
+mv -f "$STEAMROOT/steam.cfg.bak" "$STEAMROOT/steam.cfg"
+rm -rf "$STEAMROOT/linuxarm64" && mv -f "$STEAMROOT/linuxarm64.bak" "$STEAMROOT/linuxarm64"
+
+# Selective Merge, keep new runtime, restore ARM64 binaries
+if [ -d "$STEAMROOT/steamrtarm64/runtime" ]; then
+    mv "$STEAMROOT/steamrtarm64/runtime" "$STEAMROOT/tmp_rt"
+    rm -rf "$STEAMROOT/steamrtarm64" && mv "$STEAMROOT/steamrtarm64.bak" "$STEAMROOT/steamrtarm64"
+    rm -rf "$STEAMROOT/steamrtarm64/runtime" && mv "$STEAMROOT/tmp_rt" "$STEAMROOT/steamrtarm64/runtime"
+else
+    rm -rf "$STEAMROOT/steamrtarm64" && mv "$STEAMROOT/steamrtarm64.bak" "$STEAMROOT/steamrtarm64"
+fi
+
+chmod -R +x "$STEAMROOT/linuxarm64" "$STEAMROOT/steamrtarm64"
+echo "Update complete!"

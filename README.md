@@ -27,20 +27,21 @@
 ---
 
 ## Information
+* **Games** can be launched with: `SWITCHDECK_GAMEMODE=1 or 2 %command%`. This is a unique Switchdeck feature that **frees up 1GB+ of RAM** while keeping Steam Input and Multiplayer functional.
+* In **Mode 1** it unloads steamwebhelper on launch and restores it on exit. In **Mode 2** it also stops KDE Plasma & background services. It will take a few seconds to restore Steam or KDE after the game exits.
 * [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos/releases) can be used instead of Valve-Proton, it comes with [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek)
 * `update-switch.sh` can be used to update all switchdeck scripts and parts of the steam client.
 * `launch-steam.sh` contains several launch commands. Feel free to tweak them to fit your needs. Changing `STEAMDECK_MODE="false"` to `true` at the top enables steamdeck / big picture mode.
 * `wineesync` is force-disabled in `launch-steam.sh` because it causes crashes with dxvk / vulkan.
 * If a game crashes on launch or has broken graphics (mostly 32 bit games) use opengl instead: `PROTON_USE_WINED3D=1 %command%`.
 * For older games, you may need to force Proton 10+ in the settings, as Steam often defaults to unsupported older versions.
-* `launch-steamRT3.sh` can be used to run Steam in a container (RT3 Beta). For this to work, your Proton installation must be patched: Copy `runtime-helper.sh` and `toolmanifest.vdf` from your `compatibilitytools.d` folder into your Proton folder.
 
 ---
 
 ## Explanation
 This script downloads and installs the latest Steam ARM64 version.
 Builds newer than April 15th, 2026, do not work on the Nintendo Switch, so this script will automatically downgrade parts of the client to that version to prevent "illegal instruction" crashes.
-The L4T kernel 4.9 is too old to use FEX-Emu, instead this script sets up an x86_64 runtime container (SteamRT3) to use with Proton x86_64 and box64.
+The L4T kernel (4.9) is too old to support FEX-Emu. Instead, this script sets up an x86_64 environment powered by Box64 to run x86_64 Proton builds.
 
 *Credits to Ivy for the original steam-arm64 download script*
 
@@ -56,6 +57,6 @@ The L4T kernel 4.9 is too old to use FEX-Emu, instead this script sets up an x86
 ---
 
 ### Legal Notice
-The bash scripts (`launch-steam.sh`, `launch-steamRT3.sh`, etc.) in this repository are provided under the **MIT License**.
+The bash scripts (`launch-steam.sh`, etc.) in this repository are provided under the **GNU General Public License v3.0 (GPL-3.0)**.
 The Steam binaries, libraries, and resources located in `/files/downgrade/` are the proprietary property of **Valve Corporation**. These files are **NOT** covered by any open-source license and are subject to the [Steam Subscriber Agreement (SSA)](https://store.steampowered.com/subscriber_agreement).
 This project is **not** affiliated with, maintained by, or endorsed by Valve Corporation. It is provided "as-is" for the sole purpose of maintaining ARM64 compatibility for the Nintendo Switch (L4T) community.
