@@ -4,6 +4,11 @@
 # export PS4='${LINENO}: '
 # set -x
 
+########################################################################################################################################
+# Switchdeck by SildurFX | https://github.com/SildurFX/Switchdeck
+# License: GPLv3
+#
+
 # Documentation:
 # Steam:  https://gist.github.com/davispuh/6600880
 #         https://developer.valvesoftware.com/wiki/Command_line_options_(Steam)
@@ -11,7 +16,10 @@
 #         https://github.com/CachyOS/proton-cachyos
 # DXVK:	  https://github.com/pythonlover02/DXVK-Sarek/blob/main/dxvk.conf
 # Box64:  https://github.com/ptitSeb/box64/blob/main/docs/USAGE.md
-
+#
+# Steam games can be launched with: SWITCHDECK_GAMEMODE=1 or 2 %command% to free up 1GB+ of RAM.
+# Mode 1: Unloads steamwebhelper on game launch and restores it on game exit.
+# Mode 2 (Aggressive): Also stops KDE Plasma & background services, including internet.
 ########################################################################################################################################
 
 STEAMDECK_MODE="true"                   # Toggle steamdeck / big picture mode for steam.
@@ -75,13 +83,13 @@ log () {
 
 # Overwrites defaults and enables tracing if launched from a terminal (Konsole)
 if [ -t 1 ]; then
-    echo "Debug Mode Active (Terminal Detected)"
-    set -x
-    export BOX64_LOG=1
-    export WINEDEBUG=""
-    export DXVK_LOG_LEVEL=info
+	echo "Debug Mode Active (Terminal Detected)"
+	set -x
+	export BOX64_LOG=1
+	export WINEDEBUG=""
+	export DXVK_LOG_LEVEL=info
 else
-    exec > /dev/null 2>&1
+	exec > /dev/null 2>&1
 fi
 
 export TEXTDOMAIN=steam
@@ -90,32 +98,33 @@ export TEXTDOMAINDIR=/usr/share/locale
 MAGIC_RESTART_EXITCODE=42
 STEAMROOT="$HOME/.local/share/Steam"
 STEAMHOME="$HOME/.steam"
+CEF_PATH="$STEAMROOT/steamrtarm64/steamwebhelper"
 
 if [ ! -f "$STEAMROOT/.switchdeck-initial-launch" ]; then
 	log "creating initial symlinks"
 	ln -fsn "$STEAMROOT" "$STEAMHOME/root"
-	ln -fsn "$STEAMROOT" "$STEAMHOME/steam"	
+	ln -fsn "$STEAMROOT" "$STEAMHOME/steam"
 	ln -fsn "$STEAMROOT/linux32" "$STEAMHOME/sdk32"
 	ln -fsn "$STEAMROOT/linux64" "$STEAMHOME/sdk64"
 	ln -fsn "$STEAMROOT/linuxarm64" "$STEAMHOME/sdkarm64"
 	ln -fsn "$STEAMROOT/ubuntu12_32" "$STEAMHOME/bin32"
-	ln -fsn "$STEAMROOT/ubuntu12_64" "$STEAMHOME/bin64"	
+	ln -fsn "$STEAMROOT/ubuntu12_64" "$STEAMHOME/bin64"
 	ln -fsn "$STEAMHOME/bin32" "$STEAMHOME/bin"
-	ln -fsn "$STEAMROOT/steamrtarm64" "$STEAMROOT/steamrtarm32"	
+	ln -fsn "$STEAMROOT/steamrtarm64" "$STEAMROOT/steamrtarm32"
 
 	# Add steam to path
 	mkdir -p "$HOME/.local/bin"
 	ln -fsn "$STEAMROOT/launch-steam.sh" "$HOME/.local/bin/steam"
 
-    # Setup desktop path and icon
-    MENU_DIR="$HOME/.local/share/applications"
-    mkdir -p "$MENU_DIR"
+	# Setup desktop path and icon
+	MENU_DIR="$HOME/.local/share/applications"
+	mkdir -p "$MENU_DIR"
 
-    DESKTOP_DIR=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
-    mkdir -p "$DESKTOP_DIR"
+	DESKTOP_DIR=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
+	mkdir -p "$DESKTOP_DIR"
 
-    DESKTOP_FILE="$MENU_DIR/Steam.desktop"
-    cat > "$DESKTOP_FILE" <<EOF
+	DESKTOP_FILE="$MENU_DIR/Steam.desktop"
+	cat > "$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Name=Steam
 Comment=Launch Steam
@@ -126,49 +135,82 @@ Type=Application
 Categories=Game;
 MimeType=x-scheme-handler/steam;
 EOF
-    chmod +x "$DESKTOP_FILE"
-    ln -fs "$DESKTOP_FILE" "$DESKTOP_DIR/Steam.desktop"
-    update-desktop-database "$MENU_DIR" 2>/dev/null
+	chmod +x "$DESKTOP_FILE"
+	ln -fs "$DESKTOP_FILE" "$DESKTOP_DIR/Steam.desktop"
+	update-desktop-database "$MENU_DIR" 2>/dev/null
 fi
 
-function has_beta_optin()
-{
-	local betafile="$STEAMROOT/package/beta"
-	if [ ! -r "$betafile" ]; then
-		# No beta file, not in beta
-		return 1
+# Switchdeck Gamemode:
+if [ -f "${CEF_PATH}.bak" ]; then
+	# Only restore if CEF_PATH is currently a dummy script
+	if file "$CEF_PATH" | grep -q "shell script"; then
+		mv -f "${CEF_PATH}.bak" "$CEF_PATH"
 	fi
+fi
 
-	local betaname="$(<"$betafile")"
-	local stablenames=( "" "steamdeck_stable" "chromeos_public_88ac3843c888c7adb9cd406fbac4ff7a7d2cde9b" )
+(
+	while true; do
+		until pgrep -u $USER -x steam > /dev/null; do sleep 60; done
 
-	for name in "${stablenames[@]}"; do
-		if [ "$betaname" == "$name" ]; then
-			# Opted into one of the "stable" betas
-			return 1
+		RAW_MATCH=$(pgrep -af "SWITCHDECK_GAMEMODE=" | grep -v "$$" | head -n1)
+
+		if [[ "$RAW_MATCH" == *"SWITCHDECK_GAMEMODE="* ]] && [ ! -f "${CEF_PATH}.bak" ]; then
+			case "$RAW_MATCH" in *"=2"*) FLAG=2 ;; *) FLAG=1 ;; esac
+
+			# Only backup if it's an actual ELF executable
+			if file "$CEF_PATH" | grep -q "ELF"; then
+				cp -p "$CEF_PATH" "${CEF_PATH}.bak"
+
+				# Write dummy to a temp file first for an atomic swap
+				echo -e "#!/bin/bash\nexit 0" > "${CEF_PATH}.tmp"
+				chmod +x "${CEF_PATH}.tmp"
+				mv -f "${CEF_PATH}.tmp" "$CEF_PATH"
+
+				killall -9 steamwebhelper 2>/dev/null
+			fi
+
+			if [ "$FLAG" -eq 2 ]; then
+				systemctl --user stop plasma-plasmashell.service 2>/dev/null
+				killall -9 krunner kded5 kdeconnectd DiscoverNotifie onboard 2>/dev/null
+			fi
+
+			while pgrep -f "SWITCHDECK_GAMEMODE=" | grep -v "$$" > /dev/null; do sleep 20; done
+			sleep 5
+
+			# Verify the backup is still a valid binary before restoring
+			if [ -f "${CEF_PATH}.bak" ] && file "${CEF_PATH}.bak" | grep -q "ELF"; then
+				mv -f "${CEF_PATH}.bak" "$CEF_PATH"
+				sync
+			fi
+
+			# Restore session
+			if [ "$FLAG" -eq 2 ]; then
+				systemctl --user reset-failed plasma-plasmashell.service
+				kstart5 kded5 >/dev/null 2>&1
+				sleep 3
+				systemctl --user start plasma-plasmashell.service
+				{ kstart5 krunner & } >/dev/null 2>&1
+			fi
 		fi
+		sleep 15
 	done
+) &
 
-	return 0
-}
+if [ -x "$STEAMROOT/steamrtarm64/steam" ]; then
+	log "Starting Steam"
+	# Flat ARM64 -> Nested ARM64 -> Flat x64 -> Nested x64
+	_rtarm=$(ls -d "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt-arm64"/steamrt3c_platform_*/files 2>/dev/null | head -1)
+	export LD_LIBRARY_PATH="$STEAMROOT/steamrtarm64${_rtarm:+:$_rtarm/lib/aarch64-linux-gnu:$_rtarm/lib}:${LD_LIBRARY_PATH-}"
 
-if has_beta_optin; then
-    if [ -x "$STEAMROOT/steamrtarm64/steam" ]; then
-        log "Starting Steam"
-		# Flat ARM64 -> Nested ARM64 -> Flat x64 -> Nested x64
-		_rtarm=$(ls -d "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt-arm64"/steamrt3c_platform_*/files 2>/dev/null | head -1)
-		export LD_LIBRARY_PATH="$STEAMROOT/steamrtarm64${_rtarm:+:$_rtarm/lib/aarch64-linux-gnu:$_rtarm/lib}:${LD_LIBRARY_PATH-}"
+	"$STEAMROOT/steamrtarm64/steam" "$@" $STEAM_FLAGS
+	#strace -osteam.s.log -ff -e trace=file -e trace=execve -s 1000 --no-abbrev "$STEAMROOT/steamrtarm64/steam" "$@"
 
-		"$STEAMROOT/steamrtarm64/steam" "$@" $STEAM_FLAGS
-		#strace -osteam.s.log -ff -e trace=file -e trace=execve -s 1000 --no-abbrev "$STEAMROOT/steamrtarm64/steam" "$@"
+	STATUS=$?
 
-        STATUS=$?
-
-        # If steam requested to restart, then restart
-        if [ $STATUS -eq $MAGIC_RESTART_EXITCODE ] ; then
-            log "Restarting Steam by request"
-            exec "$0" "$@"
-        fi
-        exit $STATUS
-    fi
+	# If steam requested to restart, then restart
+	if [ $STATUS -eq $MAGIC_RESTART_EXITCODE ] ; then
+		log "Restarting Steam by request"
+		exec "$0" "$@"
+	fi
+	exit $STATUS
 fi

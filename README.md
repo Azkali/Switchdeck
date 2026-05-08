@@ -18,9 +18,10 @@
 ---
 
 ## Information
+* **Games** can be launched with: `SWITCHDECK_GAMEMODE=1 or 2 %command%`. This is a unique Switchdeck feature that **frees up 1GB+ of RAM** while keeping Steam Input and Multiplayer functional.
+* In **Mode 1** it unloads steamwebhelper on launch and restores it on exit. In **Mode 2** it also stops KDE Plasma & background services. It will take a few seconds to restore Steam or KDE after the game exits.
 * `launch-steam.sh` contains several launch commands. Feel free to tweak them to fit your needs. Changing `STEAMDECK_MODE="false"` to `true` at the top enables steamdeck / big picture mode.
 * For older games, you may need to force Proton 10+ in the settings, as Steam often defaults to unsupported older versions.
-* `launch-steamRT3.sh` can be used to run Steam in a container (RT3 Beta). For this to work, your Proton installation must be patched: Copy `runtime-helper.sh` and `toolmanifest.vdf` from your `compatibilitytools.d` folder into your Proton folder.
 
 ---
 
@@ -40,6 +41,6 @@ This script downloads and installs the latest Steam ARM64 version.
 ---
 
 ### Legal Notice
-The bash scripts (`launch-steam.sh`, `launch-steamRT3.sh`, etc.) in this repository are provided under the **MIT License**.
+The bash scripts (`launch-steam.sh`, etc.) in this repository are provided under the **GNU General Public License v3.0 (GPL-3.0)**.
 The Steam binaries, libraries are the proprietary property of **Valve Corporation**. These files are **NOT** covered by any open-source license and are subject to the [Steam Subscriber Agreement (SSA)](https://store.steampowered.com/subscriber_agreement).
 This project is **not** affiliated with, maintained by, or endorsed by Valve Corporation. It is provided "as-is" for the sole purpose of maintaining ARM64 compatibility for the Nintendo Switch (L4T) community.

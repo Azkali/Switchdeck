@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-# Steam install script for ARM64 Linux devices by Sildur, adjusted by Azkali
+# Switchdeck by SildurFX | https://github.com/SildurFX/Switchdeck
+# License: GPLv3
 
 set -euo pipefail
 
@@ -29,8 +30,8 @@ RTARM64ROOT="$STEAMROOT/steamrtarm64"
 if [ -d "$STEAMROOT" ] || [ -d "$STEAMHOME" ]; then
     echo "Steam directories already exist."
     read -p "A clean installation is recommended. Would you like to delete them now? (y/N): " choice
-    case "$choice" in 
-        [yY][eE][sS]|[yY]) 
+    case "$choice" in
+        [yY][eE][sS]|[yY])
             echo "Deleting $STEAMROOT and $STEAMHOME..."
             rm -rf "$STEAMROOT"
             rm -rf "$STEAMHOME"
@@ -38,7 +39,7 @@ if [ -d "$STEAMROOT" ] || [ -d "$STEAMHOME" ]; then
 			mkdir -p "$STEAMROOT"
 			mkdir -p "$STEAMHOME"
             ln -fsn "$STEAMROOT" "$STEAMHOME/root"
-	        ln -fsn "$STEAMROOT" "$STEAMHOME/steam"	
+	        ln -fsn "$STEAMROOT" "$STEAMHOME/steam"
             ;;
         *)
             echo "Continuing with dirty installation"
@@ -49,7 +50,7 @@ if [ -d "$STEAMROOT" ] || [ -d "$STEAMHOME" ]; then
 			mkdir -p "$STEAMROOT"
 			mkdir -p "$STEAMHOME"
             ln -fsn "$STEAMROOT" "$STEAMHOME/root"
-	        ln -fsn "$STEAMROOT" "$STEAMHOME/steam"	
+	        ln -fsn "$STEAMROOT" "$STEAMHOME/steam"
             ;;
     esac
 fi
@@ -79,7 +80,7 @@ if [ ! -w /dev/uinput ]; then
     echo "Configuring controller permissions..(Requires sudo)"
     sudo sh -c "mkdir -p /etc/udev/rules.d && echo 'KERNEL==\"uinput\", SUBSYSTEM==\"misc\", TAG+=\"uaccess\", OPTIONS+=\"static_node=uinput\"' > /etc/udev/rules.d/70-uinput.rules"
     sudo modprobe uinput || true
-    
+
     # Apply changes immediately
     sudo udevadm control --reload-rules
     sudo udevadm trigger --sysname-match=uinput
