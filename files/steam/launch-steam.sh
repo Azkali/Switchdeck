@@ -18,9 +18,6 @@ STEAMDECK_MODE="true"                   # Toggle steamdeck / big picture mode fo
 
 # Wine:
 export WINEESYNC=0                      # Supported but crashes dxvk and only works with wined3d
-export PROTON_NO_ESYNC=1                # set WINEESYNC=1 and PROTON_NO_ESYNC=0 to enable esync
-export PROTON_NO_FSYNC=1                # requires Kernel 5.x+
-export PROTON_NO_NTSYNC=1               # requires Kernel 6.12+
 export STAGING_WRITECOPY=1              # Uses copy-on-write for shared memory to improve stability and prevent corruption
 export STAGING_SHARED_MEMORY=1          # Enables shared memory segments to reduce overhead and improve startup times
 export __GL_THREADED_OPTIMIZATIONS=1    # Enable driver-side multi-threading to reduce CPU bottlenecks in OpenGL games
@@ -29,16 +26,16 @@ export __GL_THREADED_OPTIMIZATIONS=1    # Enable driver-side multi-threading to 
 export DXVK_ALL_CORES=1                 # Overwrite the way we assign cores to compile shaders. By default use roughly half the available CPU cores for background compilation.
 
 # Box64:
-export BOX64_PROFILE=fast               # [safest safe default fast fastest] Predefined environment variables with compatibility or performance in mind
-export BOX64_X87_NO80BITS=1             # [0=default 1] Behaviour of x87 80bits long double.
-export BOX64_DYNAREC_CALLRET=1          # [0=default 1 2] Optimize CALL/RET opcodes.
-export BOX64_DYNAREC_BIGBLOCK=3         # [0 1 2=default 3] Enable building bigger DynaRec code blocks for better performance
+# export BOX64_PROFILE=fast               # [safest safe default fast fastest] Predefined environment variables with compatibility or performance in mind
+# export BOX64_X87_NO80BITS=1             # [0=default 1] Behaviour of x87 80bits long double.
+# export BOX64_DYNAREC_CALLRET=1          # [0=default 1 2] Optimize CALL/RET opcodes.
+# export BOX64_DYNAREC_BIGBLOCK=3         # [0 1 2=default 3] Enable building bigger DynaRec code blocks for better performance
 # unstable
 # export BOX64_DYNAREC_WAIT=0           # [0 1=default] Wait or not for the building of a DynaRec code block to be ready
 # export BOX64_DYNAREC_DIRTY=2          # [0=default 1 2] Allow continue running a block that is unprotected and potentially dirty.
 
 # Disable logging:
-export BOX64_LOG=0                      # [0 1 2 3] Enable or disable Box64 logs, default value is 0 if stdout is not terminal, 1 otherwise
+# export BOX64_LOG=0                      # [0 1 2 3] Enable or disable Box64 logs, default value is 0 if stdout is not terminal, 1 otherwise
 export WINEDEBUG=-all                   # https://gitlab.winehq.org/wine/wine/-/wikis/Debug-Channels
 export DXVK_LOG_LEVEL=none              # [none error warn info debug] Controls message logging
 
