@@ -75,18 +75,28 @@ if [ ! -x "$RTARM64ROOT/pv-runtime/steam-runtime-steamrt-arm64" ]; then
 	rm -rf "$RTARM64ROOT/pv-runtime/steam-runtime-steamrt-arm64.tar.xz"
 fi
 
-if [ ! -d "$STEAMROOT/Switchdeck" ]; then
+if [ ! -d "$STEAMROOT/Switchdeck/DXVK" ]; then
     echo "Downloading DXVK-Sarek.."
-    mkdir -p "$STEAMROOT/Switchdeck"
-    SAR_URL=$(wget -qO- "https://api.github.com/repos/pythonlover02/DXVK-Sarek/releases/latest" | grep -Po '"browser_download_url": "\K.*?(?=")' | head -1)
+    mkdir -p "$STEAMROOT/Switchdeck/DXVK"
     
-    wget -q --show-progress -c -t 5 -O "$STEAMROOT/sarek.tar.gz" "$SAR_URL" || exit_on_error "DXVK-Sarek download failed"
-    tar -xf "$STEAMROOT/sarek.tar.gz" --directory "$STEAMROOT/Switchdeck" --strip-components=1 --checkpoint=100 --checkpoint-action=dot
-    rm -rf "$STEAMROOT/sarek.tar.gz"
+    LATEST_JSON=$(wget -qO- "https://api.github.com/repos/pythonlover02/DXVK-Sarek/releases/latest")
+    SAR_URL=$(echo "$LATEST_JSON" | grep -Po '"browser_download_url": "\K.*?(?=")' | head -1)
+    SAR_TAG=$(echo "$LATEST_JSON" | grep -Po '"tag_name": "\K.*?(?=")')
+    wget -q --show-progress -O- "$SAR_URL" | tar -xzf - -C "$STEAMROOT/Switchdeck/DXVK" --strip-components=1
     
-    # Create version file for the update script
-    echo "$SAR_URL" | grep -Po 'v\d+\.\d+\.\d+' > "$STEAMROOT/Switchdeck/dxvk-sarek_version.txt"
-    echo "DXVK-Sarek installed successfully."
+    # Save version tag so the update script knows what's installed
+    echo "$SAR_TAG" > "$STEAMROOT/Switchdeck/dxvk-sarek_version.txt"
+    echo "DXVK-Sarek installed successfully in Switchdeck/DXVK."
+fi
+
+if [ ! -d "$STEAMROOT/Switchdeck/VKD3D" ]; then
+    echo "Downloading VKD3D-Proton 2.3.1.."
+    mkdir -p "$STEAMROOT/Switchdeck/VKD3D"
+
+    VK_URL="https://github.com/HansKristian-Work/vkd3d-proton/releases/download/v2.3.1/vkd3d-proton-2.3.1.tar.zst"
+    wget -q --show-progress -O- "$VK_URL" | tar --use-compress-program=zstd -xf - -C "$STEAMROOT/Switchdeck/VKD3D" --strip-components=1
+    
+    echo "VKD3D installed successfully in Switchdeck/VKD3D."
 fi
 
 # Fix controller permissions

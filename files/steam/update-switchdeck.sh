@@ -48,19 +48,33 @@ fi
 
 # Check for DXVK-Sarek update
 SWITCHDECK_DIR="$HOME/.steam/steam/Switchdeck"
+DX_DIR="$SWITCHDECK_DIR/DXVK"
 VERSION_FILE="$SWITCHDECK_DIR/dxvk-sarek_version.txt"
 LATEST_JSON=$(wget -qO- "https://api.github.com/repos/pythonlover02/DXVK-Sarek/releases/latest")
 LATEST_TAG=$(echo "$LATEST_JSON" | grep -Po '"tag_name": "\K.*?(?=")')
 
-if [ "$LATEST_TAG" != "$(cat "$VERSION_FILE" 2>/dev/null)" ]; then
-    echo "New DXVK-Sarek version found ($LATEST_TAG)! Updating.."
+if [ "$LATEST_TAG" != "$(cat "$VERSION_FILE" 2>/dev/null)" ] || [ ! -d "$DX_DIR" ]; then
+    echo "Updating DXVK-Sarek to $LATEST_TAG.."
     URL=$(echo "$LATEST_JSON" | grep -Po '"browser_download_url": "\K.*?(?=")' | head -1)
-    mkdir -p "$SWITCHDECK_DIR"
+    # Clean up old folders if they exist from previous versions
     rm -rf "$SWITCHDECK_DIR/x64" "$SWITCHDECK_DIR/x32"
-    wget -q --show-progress "$URL" -O temp.tar.gz
-    tar -xzf temp.tar.gz -C "$SWITCHDECK_DIR" --strip-components=1
+    # Clean and recreate the specific DXVK subfolder
+    rm -rf "$DX_DIR" && mkdir -p "$DX_DIR"
+    
+    wget -q --show-progress "$URL" -O- | tar -xzf - -C "$DX_DIR" --strip-components=1
     echo "$LATEST_TAG" > "$VERSION_FILE"
-    rm temp.tar.gz
+    echo "DXVK-Sarek updated successfully."
+fi
+
+# Check if VKD3D is installed
+VK_DIR="$SWITCHDECK_DIR/VKD3D"
+VK_URL="https://github.com/HansKristian-Work/vkd3d-proton/releases/download/v2.3.1/vkd3d-proton-2.3.1.tar.zst"
+
+if [ ! -d "$VK_DIR" ]; then
+    echo "Missing VKD3D folder. Downloading.."
+    mkdir -p "$VK_DIR"
+    wget -q --show-progress -O- "$VK_URL" | tar --use-compress-program=zstd -xf - -C "$VK_DIR" --strip-components=1
+    echo "VKD3D added successfully."
 fi
 
 read -p "Update Steam? (y/N): " choice

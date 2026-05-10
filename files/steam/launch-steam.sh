@@ -106,71 +106,111 @@ MAGIC_RESTART_EXITCODE=42
 STEAMROOT="$HOME/.local/share/Steam"
 STEAMHOME="$HOME/.steam"
 SWITCHDECK_DIR="$STEAMROOT/Switchdeck"
-CEF_PATH="$STEAMROOT/steamrtarm64/steamwebhelper"
+CEF_PATH="$STEAMROOT/steamrtarm64/steamwebhelper.sh"
 
-# Patch Proton with DXVK-Sarek
-if [ -d "$SWITCHDECK_DIR/x64" ]; then
-    for p in "$STEAMROOT/steamapps/common"/Proton*/files; do
+# symlink folder '0' to /dev/null to stop proton initialization on every launch
+C0="$STEAMROOT/steamapps/compatdata/0"
+[[ -d "$C0" && ! -L "$C0" ]] && rm -rf "$C0"
+[[ ! -e "$C0" ]] && ln -s /dev/null "$C0"
+
+# Patch both Native and GE-Proton with DXVK-Sarek and VKD3D v2.3.1
+DX_SRC="$SWITCHDECK_DIR/DXVK"
+VK_SRC="$SWITCHDECK_DIR/VKD3D"
+
+if [ -d "$DX_SRC" ] && [ -d "$VK_SRC" ]; then
+    for p in "$STEAMROOT"/steamapps/common/Proton*/files "$STEAMROOT"/compatibilitytools.d/GE-Proton*/files; do
         [ -d "$p" ] || continue
-        P64="$p/lib/wine/dxvk/x86_64-windows"
-        P32="$p/lib/wine/dxvk/i386-windows"
+        DX_CHECK="$p/lib/wine/dxvk/x86_64-windows/d3d11.dll"
+        VK_CHECK="$p/lib/wine/vkd3d-proton/x86_64-windows/d3d12.dll"
 
-        if [ ! -L "$P64/d3d11.dll" ]; then
-            log "DXVK-Sarek not found in $(basename "$(dirname "$p")").. patching"
-            mkdir -p "$P64" "$P32"
-            for f in "$SWITCHDECK_DIR/x64"/*.dll; do ln -sf "$f" "$P64/${f##*/}"; done
-            for f in "$SWITCHDECK_DIR/x32"/*.dll; do ln -sf "$f" "$P32/${f##*/}"; done
+        if [ ! -L "$DX_CHECK" ] || [ ! -L "$VK_CHECK" ]; then
+            log "Patching: $(basename "$(dirname "$p")")"
+            # DXVK
+            DX64="$p/lib/wine/dxvk/x86_64-windows"
+            DX32="$p/lib/wine/dxvk/i386-windows"
+            mkdir -p "$DX64" "$DX32"
+            for f in "$DX_SRC/x64"/*.dll; do [ -e "$f" ] && ln -sf "$f" "$DX64/${f##*/}"; done
+            for f in "$DX_SRC/x32"/*.dll; do [ -e "$f" ] && ln -sf "$f" "$DX32/${f##*/}"; done
+            
+            # VKD3D
+            VK64="$p/lib/wine/vkd3d-proton/x86_64-windows"
+            VK32="$p/lib/wine/vkd3d-proton/i386-windows"
+            mkdir -p "$VK64" "$VK32"    
+            [ -f "$VK_SRC/x64/d3d12.dll" ] && { ln -sf "$VK_SRC/x64/d3d12.dll" "$VK64/d3d12.dll"; ln -sf "$VK_SRC/x64/d3d12.dll" "$VK64/d3d12core.dll"; }
+            [ -f "$VK_SRC/x86/d3d12.dll" ] && { ln -sf "$VK_SRC/x86/d3d12.dll" "$VK32/d3d12.dll"; ln -sf "$VK_SRC/x86/d3d12.dll" "$VK32/d3d12core.dll"; }
             log "Done!"
         fi
     done
 else
-    log "DXVK-Sarek source missing. Run update-switchdeck.sh"
+    log "Source folders missing. Run update-switchdeck.sh"
 fi
 
-# Switchdeck Gamemode:
+# Switchdeck gamemode
 if [ -f "${CEF_PATH}.bak" ]; then
-    # Only restore if CEF_PATH is currently a dummy script
-    if file "$CEF_PATH" | grep -q "shell script"; then
+    if grep -q "sleep infinity" "$CEF_PATH" 2>/dev/null; then
         mv -f "${CEF_PATH}.bak" "$CEF_PATH"
+        chmod +x "$CEF_PATH"
     fi
 fi
 
 (
+    renice -n 19 -p $BASHPID >/dev/null 2>&1
+    LOCK_FILE="/tmp/switchdeck_gamemode.pid"
+    if [ -f "$LOCK_FILE" ]; then
+        EXISTING_PID=$(cat "$LOCK_FILE")
+        if kill -0 "$EXISTING_PID" 2>/dev/null; then
+            exit 0
+        fi
+    fi
+    echo $$ > "$LOCK_FILE"
+
     while true; do
         until pgrep -u $USER -x steam > /dev/null; do sleep 60; done
 
-        RAW_MATCH=$(pgrep -af "SWITCHDECK_GAMEMODE=" | grep -v "$$" | head -n1)
+        RAW_MATCH=$(pgrep -af "SWITCHDECK_GAMEMODE=" | grep -vE "grep|$$" | head -n1)
         
-        if [[ "$RAW_MATCH" == *"SWITCHDECK_GAMEMODE="* ]] && [ ! -f "${CEF_PATH}.bak" ]; then
+        # only swap if a game is running and the current file is not the dummy
+        if [[ -n "$RAW_MATCH" ]] && ! grep -q "sleep infinity" "$CEF_PATH" 2>/dev/null; then
+            sleep 3 
+            RAW_MATCH=$(pgrep -af "SWITCHDECK_GAMEMODE=" | grep -vE "grep|$$" | head -n1)
+            [ -z "$RAW_MATCH" ] && continue
             case "$RAW_MATCH" in *"=2"*) FLAG=2 ;; *) FLAG=1 ;; esac
-            
-            # Only backup if it's an actual ELF executable
-            if file "$CEF_PATH" | grep -q "ELF"; then
-                cp -p "$CEF_PATH" "${CEF_PATH}.bak"
-                
-                # Write dummy to a temp file first for an atomic swap
-                echo -e "#!/bin/bash\nexit 0" > "${CEF_PATH}.tmp"
-                chmod +x "${CEF_PATH}.tmp"
-                mv -f "${CEF_PATH}.tmp" "$CEF_PATH"
-                
-                killall -9 steamwebhelper 2>/dev/null
-            fi
+
+            # backup and swap
+            cp -p "$CEF_PATH" "${CEF_PATH}.bak"
+            echo -e "#!/bin/bash\n# Gamemode Dummy\nsleep infinity" > "${CEF_PATH}.tmp"
+            chmod +x "${CEF_PATH}.tmp"
+            mv -f "${CEF_PATH}.tmp" "$CEF_PATH"
+
+            killall -9 steamwebhelper 2>/dev/null
+            pkill -9 -f steamwebhelper.sh 2>/dev/null
             
             if [ "$FLAG" -eq 2 ]; then
                 systemctl --user stop plasma-plasmashell.service 2>/dev/null
                 killall -9 krunner kded5 kdeconnectd DiscoverNotifie onboard 2>/dev/null
             fi
 
-            while pgrep -f "SWITCHDECK_GAMEMODE=" | grep -v "$$" > /dev/null; do sleep 20; done
-            sleep 5
-            
-            # Verify the backup is still a valid binary before restoring
-            if [ -f "${CEF_PATH}.bak" ] && file "${CEF_PATH}.bak" | grep -q "ELF"; then
-                mv -f "${CEF_PATH}.bak" "$CEF_PATH"
-                sync
+            while pgrep -f "SWITCHDECK_GAMEMODE=" | grep -vE "grep|$$" > /dev/null; do 
+                sleep 10
+            done
+            sleep 2
+
+            # Restore
+            if [ -f "${CEF_PATH}.bak" ]; then
+                # Only restore if the backup is NOT the dummy
+                if ! grep -q "sleep infinity" "${CEF_PATH}.bak" 2>/dev/null; then
+                    mv -f "${CEF_PATH}.bak" "$CEF_PATH"
+                    chmod +x "$CEF_PATH"
+                    sync
+                else
+                    # If the backup is the dummy, it's useless. Delete it so the loop can try again later.
+                    rm -f "${CEF_PATH}.bak"
+                fi
             fi
             
-            # Restore session
+            pkill -9 -f steamwebhelper.sh 2>/dev/null
+            killall -9 steamwebhelper 2>/dev/null
+
             if [ "$FLAG" -eq 2 ]; then
                 systemctl --user reset-failed plasma-plasmashell.service
                 kstart5 kded5 >/dev/null 2>&1
