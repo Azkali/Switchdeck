@@ -1,1 +1,4 @@
 * text eol=lf
+
+# don't break archive parts
+*.part* binary
