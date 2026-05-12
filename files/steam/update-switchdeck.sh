@@ -60,7 +60,7 @@ if [ "$LATEST_TAG" != "$(cat "$VERSION_FILE" 2>/dev/null)" ] || [ ! -d "$DX_DIR"
     rm -rf "$SWITCHDECK_DIR/x64" "$SWITCHDECK_DIR/x32"
     # Clean and recreate the specific DXVK subfolder
     rm -rf "$DX_DIR" && mkdir -p "$DX_DIR"
-    
+
     wget -q --show-progress "$URL" -O- | tar -xzf - -C "$DX_DIR" --strip-components=1
     echo "$LATEST_TAG" > "$VERSION_FILE"
     echo "DXVK-Sarek updated successfully."
@@ -95,21 +95,14 @@ echo "Merging binaries.."
 mv -f "$STEAMROOT/steam.cfg.bak" "$STEAMROOT/steam.cfg"
 rm -rf "$STEAMROOT/linuxarm64" && mv -f "$STEAMROOT/linuxarm64.bak" "$STEAMROOT/linuxarm64"
 
-# Always move individual files from .bak to the new folder
-find "$STEAMROOT/steamrtarm64.bak" -maxdepth 1 -type f -exec mv -f {} "$STEAMROOT/steamrtarm64/" \;
+# Selective Merge, keep new runtime, restore ARM64 binaries
+if [ -d "$STEAMROOT/steamrtarm64/pv-runtime" ]; then
+    mv "$STEAMROOT/steamrtarm64/pv-runtime" "$STEAMROOT/tmp_rt"
+    rm -rf "$STEAMROOT/steamrtarm64" && mv "$STEAMROOT/steamrtarm64.bak" "$STEAMROOT/steamrtarm64"
+    rm -rf "$STEAMROOT/steamrtarm64/pv-runtime" && mv "$STEAMROOT/tmp_rt" "$STEAMROOT/steamrtarm64/pv-runtime"
+else
+    rm -rf "$STEAMROOT/steamrtarm64" && mv "$STEAMROOT/steamrtarm64.bak" "$STEAMROOT/steamrtarm64"
+fi
 
-# Selective merge for folders
-for bak_path in "$STEAMROOT/steamrtarm64.bak"/*; do
-    if [ -d "$bak_path" ]; then
-        folder_name=$(basename "$bak_path")
-        # Only move the folder if the new update is missing it
-        if [ ! -d "$STEAMROOT/steamrtarm64/$folder_name" ]; then
-            echo "Restoring missing folder: $folder_name"
-            mv "$bak_path" "$STEAMROOT/steamrtarm64/"
-        fi
-    fi
-done
-
-rm -rf "$STEAMROOT/steamrtarm64.bak"
 chmod -R +x "$STEAMROOT/linuxarm64" "$STEAMROOT/steamrtarm64"
 echo "Update complete!"
