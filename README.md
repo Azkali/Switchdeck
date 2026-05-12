@@ -21,8 +21,8 @@
 ---
 
 ## Requirements
-* [Linux for Switch](https://wiki.switchroot.org/wiki/linux)
-* [Box64](https://github.com/ptitseb/box64) to run games. Shipped with fedora 42 by default, install from this [repo](https://github.com/Pi-Apps-Coders/box64-debs) for ubuntu.
+* [Linux for Switch](https://wiki.switchroot.org/wiki/linux) (Fedora 42 or Ubuntu Noble)
+* [Box64](https://github.com/ptitseb/box64) to run games. Shipped with Fedora 42 by default, install from this [repo](https://github.com/Pi-Apps-Coders/box64-debs) for Ubuntu.
 
 ---
 
