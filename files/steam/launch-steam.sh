@@ -118,13 +118,15 @@ DX_SRC="$SWITCHDECK_DIR/DXVK"
 VK_SRC="$SWITCHDECK_DIR/VKD3D"
 
 if [ -d "$DX_SRC" ] && [ -d "$VK_SRC" ]; then
-    for p in "$STEAMROOT"/steamapps/common/Proton*/files "$STEAMROOT"/compatibilitytools.d/GE-Proton*/files; do
+    find "$STEAMROOT/steamapps/common" "$STEAMROOT/compatibilitytools.d" -maxdepth 1 \( -name "Proton*" -o -name "GE-Proton*" \) 2>/dev/null | while read -r p_dir; do
+        p="$p_dir/files"
         [ -d "$p" ] || continue
         DX_CHECK="$p/lib/wine/dxvk/x86_64-windows/d3d11.dll"
         VK_CHECK="$p/lib/wine/vkd3d-proton/x86_64-windows/d3d12.dll"
 
         if [ ! -L "$DX_CHECK" ] || [ ! -L "$VK_CHECK" ]; then
-            log "Patching: $(basename "$(dirname "$p")")"
+            log "Patching: $(basename "$p_dir")"
+            
             # DXVK
             DX64="$p/lib/wine/dxvk/x86_64-windows"
             DX32="$p/lib/wine/dxvk/i386-windows"
