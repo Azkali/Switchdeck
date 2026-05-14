@@ -78,14 +78,20 @@ fi
 if [ ! -d "$STEAMROOT/Switchdeck/DXVK" ]; then
     echo "Downloading DXVK-Sarek.."
     mkdir -p "$STEAMROOT/Switchdeck/DXVK"
-    
+
     LATEST_JSON=$(wget -qO- "https://api.github.com/repos/pythonlover02/DXVK-Sarek/releases/latest")
-    SAR_URL=$(echo "$LATEST_JSON" | grep -Po '"browser_download_url": "\K.*?(?=")' | head -1)
-    SAR_TAG=$(echo "$LATEST_JSON" | grep -Po '"tag_name": "\K.*?(?=")')
-    wget -q --show-progress -O- "$SAR_URL" | tar -xzf - -C "$STEAMROOT/Switchdeck/DXVK" --strip-components=1
+    DXVK_URL=$(echo "$LATEST_JSON" | sed -n 's/.*"browser_download_url": "\([^"]*\)".*/\1/p' | head -1)
+    DXVK_TAG=$(echo "$LATEST_JSON" | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | head -1)
+    
+    # protection fallback
+    [ -z "$DXVK_URL" ] && { echo "Error: GitHub API URL empty. Aborting installation."; exit 1; }
+
+    wget -q --show-progress -c -t 5 -O "$STEAMROOT/Switchdeck/DXVK/dxvk-sarek.tar.gz" "$DXVK_URL"
+    tar -xzf "$STEAMROOT/Switchdeck/DXVK/dxvk-sarek.tar.gz" --directory "$STEAMROOT/Switchdeck/DXVK" --strip-components=1
+    rm -f "$STEAMROOT/Switchdeck/DXVK/dxvk-sarek.tar.gz"
     
     # Save version tag so the update script knows what's installed
-    echo "$SAR_TAG" > "$STEAMROOT/Switchdeck/dxvk-sarek_version.txt"
+    echo "$DXVK_TAG" > "$STEAMROOT/Switchdeck/dxvk-sarek_version.txt"
     echo "DXVK-Sarek installed successfully in Switchdeck/DXVK."
 fi
 
@@ -94,7 +100,10 @@ if [ ! -d "$STEAMROOT/Switchdeck/VKD3D" ]; then
     mkdir -p "$STEAMROOT/Switchdeck/VKD3D"
 
     VK_URL="https://github.com/HansKristian-Work/vkd3d-proton/releases/download/v2.3.1/vkd3d-proton-2.3.1.tar.zst"
-    wget -q --show-progress -O- "$VK_URL" | tar --use-compress-program=zstd -xf - -C "$STEAMROOT/Switchdeck/VKD3D" --strip-components=1
+
+    wget -q --show-progress -c -t 5 -O "$STEAMROOT/Switchdeck/VKD3D/vkd3d.tar.zst" "$VK_URL"
+    tar -xf "$STEAMROOT/Switchdeck/VKD3D/vkd3d.tar.zst" --directory "$STEAMROOT/Switchdeck/VKD3D" --strip-components=1
+    rm -f "$STEAMROOT/Switchdeck/VKD3D/vkd3d.tar.zst"
     
     echo "VKD3D installed successfully in Switchdeck/VKD3D."
 fi

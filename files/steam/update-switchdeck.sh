@@ -51,17 +51,23 @@ SWITCHDECK_DIR="$HOME/.steam/steam/Switchdeck"
 DX_DIR="$SWITCHDECK_DIR/DXVK"
 VERSION_FILE="$SWITCHDECK_DIR/dxvk-sarek_version.txt"
 LATEST_JSON=$(wget -qO- "https://api.github.com/repos/pythonlover02/DXVK-Sarek/releases/latest")
-LATEST_TAG=$(echo "$LATEST_JSON" | grep -Po '"tag_name": "\K.*?(?=")')
+LATEST_TAG=$(echo "$LATEST_JSON" | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | head -1)
 
 if [ "$LATEST_TAG" != "$(cat "$VERSION_FILE" 2>/dev/null)" ] || [ ! -d "$DX_DIR" ]; then
     echo "Updating DXVK-Sarek to $LATEST_TAG.."
-    URL=$(echo "$LATEST_JSON" | grep -Po '"browser_download_url": "\K.*?(?=")' | head -1)
-    # Clean up old folders if they exist from previous versions
+    DXVK_URL=$(echo "$LATEST_JSON" | sed -n 's/.*"browser_download_url": "\([^"]*\)".*/\1/p' | head -1)
+
+    # protection fallback
+    [ -z "$DXVK_URL" ] && { echo "Error: GitHub API URL empty. Aborting update to protect current installation."; exit 1; }
+
+    # Clean up old folders if they exist
     rm -rf "$SWITCHDECK_DIR/x64" "$SWITCHDECK_DIR/x32"
-    # Clean and recreate the specific DXVK subfolder
     rm -rf "$DX_DIR" && mkdir -p "$DX_DIR"
 
-    wget -q --show-progress "$URL" -O- | tar -xzf - -C "$DX_DIR" --strip-components=1
+    wget -q --show-progress -c -t 5 -O "$DX_DIR/dxvk-sarek.tar.gz" "$URL"
+    tar -xzf "$DX_DIR/dxvk-sarek.tar.gz" --directory "$DX_DIR" --strip-components=1
+    rm -f "$DX_DIR/dxvk-sarek.tar.gz"
+
     echo "$LATEST_TAG" > "$VERSION_FILE"
     echo "DXVK-Sarek updated successfully."
 fi
@@ -73,7 +79,11 @@ VK_URL="https://github.com/HansKristian-Work/vkd3d-proton/releases/download/v2.3
 if [ ! -d "$VK_DIR" ]; then
     echo "Missing VKD3D folder. Downloading.."
     mkdir -p "$VK_DIR"
-    wget -q --show-progress -O- "$VK_URL" | tar --use-compress-program=zstd -xf - -C "$VK_DIR" --strip-components=1
+
+    wget -q --show-progress -c -t 5 -O "$VK_DIR/vkd3d.tar.zst" "$VK_URL"
+    tar -xf "$VK_DIR/vkd3d.tar.zst" --directory "$VK_DIR" --strip-components=1
+    rm -f "$VK_DIR/vkd3d.tar.zst"
+    
     echo "VKD3D added successfully."
 fi
 
