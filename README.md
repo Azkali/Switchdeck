@@ -41,9 +41,7 @@ Use Proton 10 or [Proton-10-GE](https://github.com/gloriouseggroll/proton-ge-cus
 ---
 
 ## Explanation
-This script downloads and installs the latest Steam ARM64 version.
-Builds newer than April 15th, 2026, do not work on the Nintendo Switch, so this script will automatically downgrade parts of the client to that version to prevent "illegal instruction" crashes.
-The L4T kernel (4.9) is too old to support FEX-Emu. Instead, this script sets up an x86_64 environment powered by Box64 to run x86_64 Proton builds.
+This script automates the download and installation of Steam ARM64. Because Steam client builds newer than April 15th, 2026, cause "illegal instruction" crashes on the Nintendo Switch, the script automatically downgrades specific parts of Steam to that version. The L4T kernel (4.9) is too old to support modern FEX-Emu translation layers, this setup establishes an alternative x86_64 environment powered by Box64 to run x86_64 Proton builds. It also applies custom compatibility patches to both native Proton and Proton-GE to ensure Vulkan 1.2 support and to disable a broken Vulkan extension, directly resolving vertex explosion bugs in 32-bit games on the Tegra X1.
 
 *Credits to Ivy for the original steam-arm64 download script*
 
