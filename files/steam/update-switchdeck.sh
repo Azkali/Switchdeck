@@ -64,7 +64,7 @@ if [ "$LATEST_TAG" != "$(cat "$VERSION_FILE" 2>/dev/null)" ] || [ ! -d "$DX_DIR"
     rm -rf "$SWITCHDECK_DIR/x64" "$SWITCHDECK_DIR/x32"
     rm -rf "$DX_DIR" && mkdir -p "$DX_DIR"
 
-    wget -q --show-progress -c -t 5 -O "$DX_DIR/dxvk-sarek.tar.gz" "$URL"
+    wget -q --show-progress -c -t 5 -O "$DX_DIR/dxvk-sarek.tar.gz" "$DXVK_URL"
     tar -xzf "$DX_DIR/dxvk-sarek.tar.gz" --directory "$DX_DIR" --strip-components=1
     rm -f "$DX_DIR/dxvk-sarek.tar.gz"
 
@@ -79,6 +79,9 @@ VK_URL="https://github.com/HansKristian-Work/vkd3d-proton/releases/download/v2.3
 if [ ! -d "$VK_DIR" ]; then
     echo "Missing VKD3D folder. Downloading.."
     mkdir -p "$VK_DIR"
+
+    # Check if zstd is missing
+    command -v zstd >/dev/null || { echo "zstd is missing. Installing dependency.. (Requires sudo)"; [ -f /etc/fedora-release ] && sudo dnf install zstd -y || sudo apt-get install zstd -y; }
 
     wget -q --show-progress -c -t 5 -O "$VK_DIR/vkd3d.tar.zst" "$VK_URL"
     tar -xf "$VK_DIR/vkd3d.tar.zst" --directory "$VK_DIR" --strip-components=1
