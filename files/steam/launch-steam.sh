@@ -107,6 +107,7 @@ STEAMROOT="$HOME/.local/share/Steam"
 STEAMHOME="$HOME/.steam"
 SWITCHDECK_DIR="$STEAMROOT/Switchdeck"
 CEF_PATH="$STEAMROOT/steamrtarm64/steamwebhelper.sh"
+CEF_DUMMY="${CEF_PATH}.dummy"
 
 # symlink folder '0' to /dev/null to stop proton initialization on every launch
 C0="$STEAMROOT/steamapps/compatdata/0"
@@ -172,75 +173,61 @@ find "$STEAMROOT/steamapps/common" "$STEAMROOT/compatibilitytools.d" -maxdepth 1
 done
 
 # Switchdeck gamemode
-if [ -f "${CEF_PATH}.bak" ]; then
-    if grep -q "sleep infinity" "$CEF_PATH" 2>/dev/null; then
-        mv -f "${CEF_PATH}.bak" "$CEF_PATH"
-        chmod +x "$CEF_PATH"
-    fi
-fi
+# Preparation & Crash Recovery
+[ ! -f "$CEF_DUMMY" ] && echo -e "#!/bin/bash\n# Gamemode Dummy\nsleep infinity" > "$CEF_DUMMY" && chmod +x "$CEF_DUMMY"
+[ -f "${CEF_PATH}.bak" ] && { [ $(stat -c%s "$CEF_PATH" 2>/dev/null || echo 0) -lt 100 ] || [ -f "/tmp/cef_swapped.lock" ]; } && mv -f "${CEF_PATH}.bak" "$CEF_PATH" && chmod +x "$CEF_PATH" && rm -f "/tmp/cef_swapped.lock"
 
 (
     renice -n 19 -p $BASHPID >/dev/null 2>&1
     LOCK_FILE="/tmp/switchdeck_gamemode.pid"
-    if [ -f "$LOCK_FILE" ]; then
-        EXISTING_PID=$(cat "$LOCK_FILE")
-        if kill -0 "$EXISTING_PID" 2>/dev/null; then
-            exit 0
-        fi
-    fi
+    if [ -f "$LOCK_FILE" ] && kill -0 $(cat "$LOCK_FILE") 2>/dev/null; then exit 0; fi
     echo $$ > "$LOCK_FILE"
 
     while true; do
         until pgrep -u $USER -x steam > /dev/null; do sleep 60; done
 
         RAW_MATCH=$(pgrep -af "SWITCHDECK_GAMEMODE=" | grep -vE "grep|$$" | head -n1)
-        
-        # only swap if a game is running and the current file is not the dummy
-        if [[ -n "$RAW_MATCH" ]] && ! grep -q "sleep infinity" "$CEF_PATH" 2>/dev/null; then
-            sleep 3 
+        if [[ -n "$RAW_MATCH" ]] && [ ! -f "/tmp/cef_swapped.lock" ]; then
+            sleep 3
             RAW_MATCH=$(pgrep -af "SWITCHDECK_GAMEMODE=" | grep -vE "grep|$$" | head -n1)
-            [ -z "$RAW_MATCH" ] && continue
+            [ -z "$RAW_MATCH" ] && { sleep 15; continue; }
+            
             case "$RAW_MATCH" in *"=2"*) FLAG=2 ;; *) FLAG=1 ;; esac
 
-            # backup and swap
-            cp -p "$CEF_PATH" "${CEF_PATH}.bak"
-            echo -e "#!/bin/bash\n# Gamemode Dummy\nsleep infinity" > "${CEF_PATH}.tmp"
-            chmod +x "${CEF_PATH}.tmp"
-            mv -f "${CEF_PATH}.tmp" "$CEF_PATH"
+            # Swapping
+            if [ $(stat -c%s "$CEF_PATH" 2>/dev/null || echo 0) -gt 100 ]; then
+                mv -f "$CEF_PATH" "${CEF_PATH}.bak"
+                cp -p "$CEF_DUMMY" "$CEF_PATH"
+                touch "/tmp/cef_swapped.lock" && sync
+            fi
 
             killall -9 steamwebhelper 2>/dev/null
             pkill -9 -f steamwebhelper.sh 2>/dev/null
             
+            # Gamemode 2:
             if [ "$FLAG" -eq 2 ]; then
                 systemctl --user stop plasma-plasmashell.service 2>/dev/null
                 killall -9 krunner kded5 kdeconnectd DiscoverNotifie onboard 2>/dev/null
             fi
 
-            while pgrep -f "SWITCHDECK_GAMEMODE=" | grep -vE "grep|$$" > /dev/null; do 
-                sleep 10
-            done
+            # Check if the game is still running
+            while pgrep -f "SWITCHDECK_GAMEMODE=" | grep -vE "grep|$$" > /dev/null; do sleep 5; done
             sleep 2
 
             # Restore
-            if [ -f "${CEF_PATH}.bak" ]; then
-                # Only restore if the backup is NOT the dummy
-                if ! grep -q "sleep infinity" "${CEF_PATH}.bak" 2>/dev/null; then
-                    mv -f "${CEF_PATH}.bak" "$CEF_PATH"
-                    chmod +x "$CEF_PATH"
-                    sync
-                else
-                    # If the backup is the dummy, it's useless. Delete it so the loop can try again later.
-                    rm -f "${CEF_PATH}.bak"
-                fi
+            if [ -f "/tmp/cef_swapped.lock" ] && [ -f "${CEF_PATH}.bak" ] && [ $(stat -c%s "${CEF_PATH}.bak" 2>/dev/null || echo 0) -gt 100 ]; then
+                rm -f "$CEF_PATH"
+                mv -f "${CEF_PATH}.bak" "$CEF_PATH" && chmod +x "$CEF_PATH"
+                rm -f "/tmp/cef_swapped.lock" && sync
             fi
             
             pkill -9 -f steamwebhelper.sh 2>/dev/null
             killall -9 steamwebhelper 2>/dev/null
 
+            # Desktop Restoration
             if [ "$FLAG" -eq 2 ]; then
                 systemctl --user reset-failed plasma-plasmashell.service
-                kstart5 kded5 >/dev/null 2>&1
-                sleep 3
+                kstart5 kded5 >/dev/null 2>&1 && sleep 2
                 systemctl --user start plasma-plasmashell.service
                 { kstart5 krunner & } >/dev/null 2>&1
             fi
