@@ -6,7 +6,7 @@
 set -euo pipefail
 
 exit_on_error() {
-    echo "ERROR: $1" >&2
+    printf "\nERROR: %s\n" "$1" >&2
     exit 1
 }
 
@@ -28,47 +28,54 @@ RTARM64ROOT="$STEAMROOT/steamrtarm64"
 
 # Check if either Steam directory exists
 if [ -d "$STEAMROOT" ] || [ -d "$STEAMHOME" ]; then
-    echo "Steam directories already exist."
+    printf "\nSteam directories already exist.\n"
     read -p "A clean installation is recommended. Would you like to delete them now? (y/N): " choice
     case "$choice" in 
         [yY][eE][sS]|[yY]) 
-            echo "Deleting $STEAMROOT and $STEAMHOME..."
+            printf "\nDeleting %s and %s...\n" "$STEAMROOT" "$STEAMHOME"
             rm -rf "$STEAMROOT"
             rm -rf "$STEAMHOME"
 			# Make steam folders
 			mkdir -p "$STEAMROOT"
 			mkdir -p "$STEAMHOME"
             ln -fsn "$STEAMROOT" "$STEAMHOME/root"
-	        ln -fsn "$STEAMROOT" "$STEAMHOME/steam"	
+	        ln -fsn "$STEAMROOT" "$STEAMHOME/steam"
             ;;
         *)
-            echo "Continuing with dirty installation"
+            printf "\nContinuing with dirty installation..\n"
             shopt -s extglob dotglob
-            eval "rm -rf "$STEAMROOT"/!(compatibilitytools.d|depotcache|steamapps|userdata)"
+            eval "rm -rf \"$STEAMROOT\"/!(compatibilitytools.d|depotcache|steamapps|userdata)"
             rm -rf "$STEAMHOME"
             # Make steam folders
 			mkdir -p "$STEAMROOT"
 			mkdir -p "$STEAMHOME"
             ln -fsn "$STEAMROOT" "$STEAMHOME/root"
-	        ln -fsn "$STEAMROOT" "$STEAMHOME/steam"	
+	        ln -fsn "$STEAMROOT" "$STEAMHOME/steam"
             ;;
     esac
+else
+    # Fresh installation
+    printf "\nNo existing Steam installation found. Performing fresh setup..\n"
+    mkdir -p "$STEAMROOT"
+    mkdir -p "$STEAMHOME"
+    ln -fsn "$STEAMROOT" "$STEAMHOME/root"
+    ln -fsn "$STEAMROOT" "$STEAMHOME/steam"
 fi
 
 if [ ! -x "$RTARM64ROOT" ]; then
-	echo "Downloading steam bootstrap.."
-	mkdir -p "$STEAMROOT/package"
+    printf "\nDownloading steam bootstrap..\n"
+    mkdir -p "$STEAMROOT/package"
     rm -f "$STEAMROOT/package/beta"
-	echo "publicbeta" > "$STEAMROOT/package/beta"
+    echo "publicbeta" > "$STEAMROOT/package/beta"
     chmod 444 "$STEAMROOT/package/beta"
 	wget -q --show-progress -c -t 5 -O "$STEAMROOT/linuxarm64.zip" "https://client-update.steamstatic.com/bins_linuxarm64_linuxarm64.zip.f523fa87fc6b9b5435a5e7370cb0d664ef53b50b" || exit_on_error "steam bootstrap download failed (check your internet connection)"
-	unzip -d "$STEAMROOT" "$STEAMROOT/linuxarm64.zip" "steamrtarm64/steam"
-	chmod +x "$RTARM64ROOT/steam"
-	rm -rf "$STEAMROOT/linuxarm64.zip"
+    unzip -d "$STEAMROOT" "$STEAMROOT/linuxarm64.zip" "steamrtarm64/steam"
+    chmod +x "$RTARM64ROOT/steam"
+    rm -rf "$STEAMROOT/linuxarm64.zip"
 fi
 
 if [ ! -x "$RTARM64ROOT/pv-runtime/steam-runtime-steamrt-arm64" ]; then
-	echo "Downloading steam-runtime.."
+	printf "\nDownloading steam-runtime..\n"
 	mkdir -p "$RTARM64ROOT/pv-runtime"
 	wget -q --show-progress -c -t 5 -O "$RTARM64ROOT/pv-runtime/steam-runtime-steamrt-arm64.tar.xz" "https://repo.steampowered.com/steamrt3c/images/latest-public-beta/steam-runtime-steamrt-arm64.tar.xz" || exit_on_error "steam runtime download failed (check your internet connection)"
 	tar -xf "$RTARM64ROOT/pv-runtime/steam-runtime-steamrt-arm64.tar.xz" --directory "$RTARM64ROOT/pv-runtime" --checkpoint=200 --checkpoint-action=dot
@@ -76,7 +83,7 @@ if [ ! -x "$RTARM64ROOT/pv-runtime/steam-runtime-steamrt-arm64" ]; then
 fi
 
 if [ ! -d "$STEAMROOT/Switchdeck/DXVK" ]; then
-    echo "Downloading DXVK-Sarek.."
+    printf "\nDownloading DXVK-Sarek..\n"
     mkdir -p "$STEAMROOT/Switchdeck/DXVK"
 
     LATEST_JSON=$(wget -qO- "https://api.github.com/repos/pythonlover02/DXVK-Sarek/releases/latest")
@@ -84,7 +91,7 @@ if [ ! -d "$STEAMROOT/Switchdeck/DXVK" ]; then
     DXVK_TAG=$(echo "$LATEST_JSON" | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | head -1)
     
     # protection fallback
-    [ -z "$DXVK_URL" ] && { echo "Error: GitHub API URL empty. Aborting installation."; exit 1; }
+    [ -z "$DXVK_URL" ] && { printf "\nError: GitHub API URL empty. Aborting installation.\n"; exit 1; }
 
     wget -q --show-progress -c -t 5 -O "$STEAMROOT/Switchdeck/DXVK/dxvk-sarek.tar.gz" "$DXVK_URL"
     tar -xzf "$STEAMROOT/Switchdeck/DXVK/dxvk-sarek.tar.gz" --directory "$STEAMROOT/Switchdeck/DXVK" --strip-components=1
@@ -92,43 +99,43 @@ if [ ! -d "$STEAMROOT/Switchdeck/DXVK" ]; then
     
     # Save version tag so the update script knows what's installed
     echo "$DXVK_TAG" > "$STEAMROOT/Switchdeck/dxvk-sarek_version.txt"
-    echo "DXVK-Sarek installed successfully in Switchdeck/DXVK."
+    printf "\nDXVK-Sarek installed successfully in Switchdeck/DXVK.\n"
 fi
 
 if [ ! -d "$STEAMROOT/Switchdeck/VKD3D" ]; then
-    echo "Downloading VKD3D-Proton 2.3.1.."
+    printf "\nDownloading VKD3D-Proton 2.3.1..\n"
     mkdir -p "$STEAMROOT/Switchdeck/VKD3D"
 
     VK_URL="https://github.com/HansKristian-Work/vkd3d-proton/releases/download/v2.3.1/vkd3d-proton-2.3.1.tar.zst"
 
     # Check if zstd is missing
-    command -v zstd >/dev/null || { echo "zstd is missing. Installing dependency.. (Requires sudo)"; [ -f /etc/fedora-release ] && sudo dnf install zstd -y || sudo apt-get install zstd -y; }
+    command -v zstd >/dev/null || { printf "\nzstd is missing. Installing dependency.. (Requires sudo)\n"; [ -f /etc/fedora-release ] && sudo dnf install zstd -y || sudo apt install zstd -y; }
 
     wget -q --show-progress -c -t 5 -O "$STEAMROOT/Switchdeck/VKD3D/vkd3d.tar.zst" "$VK_URL"
     tar -xf "$STEAMROOT/Switchdeck/VKD3D/vkd3d.tar.zst" --directory "$STEAMROOT/Switchdeck/VKD3D" --strip-components=1
     rm -f "$STEAMROOT/Switchdeck/VKD3D/vkd3d.tar.zst"
     
-    echo "VKD3D installed successfully in Switchdeck/VKD3D."
+    printf "\nVKD3D installed successfully in Switchdeck/VKD3D.\n"
 fi
 
 # Fix controller permissions
 if [ ! -w /dev/uinput ]; then
-    echo "Configuring controller permissions..(Requires sudo)"
+    printf "\nConfiguring controller permissions.. (Requires sudo)\n"
     sudo sh -c "mkdir -p /etc/udev/rules.d && echo 'KERNEL==\"uinput\", SUBSYSTEM==\"misc\", TAG+=\"uaccess\", OPTIONS+=\"static_node=uinput\"' > /etc/udev/rules.d/70-uinput.rules"
     sudo modprobe uinput || true
     
     # Apply changes immediately
     sudo udevadm control --reload-rules
     sudo udevadm trigger --sysname-match=uinput
-    echo "Controller permissions applied successfully."
+    printf "\nController permissions applied successfully.\n"
 fi
 
 if [ -x "$RTARM64ROOT/steam" ]; then
-    echo "Starting Steam (Initial Update phase)..."
+    printf "\nStarting Steam (Initial Update phase)..\n"
     export LD_LIBRARY_PATH="$RTARM64ROOT:${LD_LIBRARY_PATH-}"
     "$RTARM64ROOT/steam" "$@" || true
     
-    echo "Steam exited. Downloading files to downgrade steam.."
+    printf "\nSteam exited. Downloading files to downgrade steam..\n"
 
     # temp dir for extraction
     TEMP_SD="$STEAMROOT/temp_sd"
@@ -160,6 +167,6 @@ if [ -x "$RTARM64ROOT/steam" ]; then
     # Overkill but make sure everything is executable
 	chmod -R +x "$STEAMROOT"
 
-    echo "Launching Steam"
+    printf "\nLaunching Steam...\n"
     exec "$STEAMROOT/launch-steam.sh" "$@"
 fi

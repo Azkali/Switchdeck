@@ -21,9 +21,11 @@
 # Mode 2 (Aggressive): Also stops KDE Plasma & background services, including internet.
 ########################################################################################################################################
 
+# Switchdeck:
 STEAMDECK_MODE="false"                  # Toggle steamdeck / big picture mode for steam.
+# DISABLE_GAMEMODE=1                    # Disable switchdeck gamemode.
 
-# Proton-CachyOS:
+# Proton:
 export PROTON_USE_WOW64=1               # Use wow64 mode
 export PROTON_DXVK_SAREK=1              # Use the dxvk-sarek fork as DXVK replacement for older GPUs that don't support Vulkan 1.3 (supports Vulkan 1.1+)
 
@@ -36,7 +38,7 @@ export STAGING_WRITECOPY=1              # Uses copy-on-write for shared memory t
 export STAGING_SHARED_MEMORY=1          # Enables shared memory segments to reduce overhead and improve startup times
 export __GL_THREADED_OPTIMIZATIONS=1    # Enable driver-side multi-threading to reduce CPU bottlenecks in OpenGL games
 
-# DXVK:
+# DXVK-Sarek:
 export DXVK_ALL_CORES=1                 # Overwrite the way we assign cores to compile shaders. By default use roughly half the available CPU cores for background compilation.
 
 # Box64:
@@ -172,69 +174,91 @@ find "$STEAMROOT/steamapps/common" "$STEAMROOT/compatibilitytools.d" -maxdepth 1
     fi
 done
 
-# Switchdeck gamemode
-# Preparation & Crash Recovery
-[ ! -f "$CEF_DUMMY" ] && echo -e "#!/bin/bash\n# Gamemode Dummy\nsleep infinity" > "$CEF_DUMMY" && chmod +x "$CEF_DUMMY"
-[ -f "${CEF_PATH}.bak" ] && { [ $(stat -c%s "$CEF_PATH" 2>/dev/null || echo 0) -lt 100 ] || [ -f "/tmp/cef_swapped.lock" ]; } && mv -f "${CEF_PATH}.bak" "$CEF_PATH" && chmod +x "$CEF_PATH" && rm -f "/tmp/cef_swapped.lock"
+# Switchdeck Gamemode
+if [ "${DISABLE_GAMEMODE:-0}" -ne 1 ]; then
+    # Preparation & Crash Recovery
+    [ ! -f "$CEF_DUMMY" ] && printf "#!/bin/bash\n# Gamemode Dummy\nsleep infinity\n" > "$CEF_DUMMY" && chmod +x "$CEF_DUMMY"
+    [ -f "${CEF_PATH}.bak" ] && { [ $(stat -c%s "$CEF_PATH" 2>/dev/null || echo 0) -lt 100 ] || [ -f "/tmp/cef_swapped.lock" ]; } && mv -f "${CEF_PATH}.bak" "$CEF_PATH" && chmod +x "$CEF_PATH" && rm -f "/tmp/cef_swapped.lock"
+    # Capture the main script's PID to track its lifecycle
+    PARENT_PID=$$
+    (
+        # low prio loop and prevent multiple loops
+        renice -n 19 -p $BASHPID >/dev/null 2>&1
+        LOCK_FILE="/tmp/switchdeck_gamemode.pid"
+        if [ -f "$LOCK_FILE" ] && kill -0 $(cat "$LOCK_FILE") 2>/dev/null; then exit 0; fi
+        echo $$ > "$LOCK_FILE"
 
-(
-    renice -n 19 -p $BASHPID >/dev/null 2>&1
-    LOCK_FILE="/tmp/switchdeck_gamemode.pid"
-    if [ -f "$LOCK_FILE" ] && kill -0 $(cat "$LOCK_FILE") 2>/dev/null; then exit 0; fi
-    echo $$ > "$LOCK_FILE"
-
-    while true; do
-        until pgrep -u $USER -x steam > /dev/null; do sleep 60; done
-
-        RAW_MATCH=$(pgrep -af "SWITCHDECK_GAMEMODE=" | grep -vE "grep|$$" | head -n1)
-        if [[ -n "$RAW_MATCH" ]] && [ ! -f "/tmp/cef_swapped.lock" ]; then
-            sleep 3
-            RAW_MATCH=$(pgrep -af "SWITCHDECK_GAMEMODE=" | grep -vE "grep|$$" | head -n1)
-            [ -z "$RAW_MATCH" ] && { sleep 15; continue; }
-            
-            case "$RAW_MATCH" in *"=2"*) FLAG=2 ;; *) FLAG=1 ;; esac
-
-            # Swapping
-            if [ $(stat -c%s "$CEF_PATH" 2>/dev/null || echo 0) -gt 100 ]; then
-                mv -f "$CEF_PATH" "${CEF_PATH}.bak"
-                cp -p "$CEF_DUMMY" "$CEF_PATH"
-                touch "/tmp/cef_swapped.lock" && sync
+        # Scan /proc to find active gamemode PID
+        find_gamemode_pid() {
+            for p in /proc/[0-9]*; do
+                [ -r "$p/environ" ] && grep -zq "^SWITCHDECK_GAMEMODE=" "$p/environ" 2>/dev/null && echo "${p##*/}" && return 0
+            done
+            return 1
+        }
+        # Verify if Steam is active
+        is_steam_running() {
+            for p in /proc/[0-9]*; do
+                [ -r "$p/comm" ] && read -r c < "$p/comm" 2>/dev/null && [ "$c" = "steam" ] && return 0
+            done
+            return 1
+        }
+        # Main monitoring loop
+        while true; do
+            # break the loop and exit cleanly
+            if ! kill -0 "$PARENT_PID" 2>/dev/null; then
+                rm -f "$LOCK_FILE"
+                exit 0
             fi
-
-            killall -9 steamwebhelper 2>/dev/null
-            pkill -9 -f steamwebhelper.sh 2>/dev/null
-            
-            # Gamemode 2:
-            if [ "$FLAG" -eq 2 ]; then
-                systemctl --user stop plasma-plasmashell.service 2>/dev/null
-                killall -9 krunner kded5 kdeconnectd DiscoverNotifie onboard 2>/dev/null
+            # Check for steam existence without trapping execution indefinitely
+            if ! is_steam_running; then
+                sleep 15
+                continue
             fi
+            GAME_PID=$(find_gamemode_pid)
+            if [[ -n "$GAME_PID" ]] && [ ! -f "/tmp/cef_swapped.lock" ]; then
+                sleep 3
+                GAME_PID=$(find_gamemode_pid)
+                [ -z "$GAME_PID" ] && { sleep 15; continue; }
+                
+                # Detect mode 1 or 2 from application context
+                grep -zq "^SWITCHDECK_GAMEMODE=2" "/proc/$GAME_PID/environ" 2>/dev/null && FLAG=2 || FLAG=1
 
-            # Check if the game is still running
-            while pgrep -f "SWITCHDECK_GAMEMODE=" | grep -vE "grep|$$" > /dev/null; do sleep 5; done
-            sleep 2
+                # Replace with placeholder dummy
+                if [ $(stat -c%s "$CEF_PATH" 2>/dev/null || echo 0) -gt 100 ]; then
+                    mv -f "$CEF_PATH" "${CEF_PATH}.bak" && cp -p "$CEF_DUMMY" "$CEF_PATH" && touch "/tmp/cef_swapped.lock"
+                fi
+                killall -9 steamwebhelper drkonqi 2>/dev/null; pkill -9 -f steamwebhelper.sh 2>/dev/null
+                
+                # Mode 2: Cleanly stop components to prevent crash window popups
+                if [ "$FLAG" -eq 2 ]; then
+                    systemctl --user stop plasma-plasmashell.service 2>/dev/null
+                    killall -9 krunner kded5 kded6 kdeconnectd DiscoverNotifier drkonqi 2>/dev/null
+                fi
 
-            # Restore
-            if [ -f "/tmp/cef_swapped.lock" ] && [ -f "${CEF_PATH}.bak" ] && [ $(stat -c%s "${CEF_PATH}.bak" 2>/dev/null || echo 0) -gt 100 ]; then
-                rm -f "$CEF_PATH"
-                mv -f "${CEF_PATH}.bak" "$CEF_PATH" && chmod +x "$CEF_PATH"
-                rm -f "/tmp/cef_swapped.lock" && sync
+                # Wait directly for target process to close
+                while [ -d "/proc/$GAME_PID" ]; do sleep 5; done
+                sleep 2
+
+                # Revert
+                if [ -f "/tmp/cef_swapped.lock" ] && [ -f "${CEF_PATH}.bak" ] && [ $(stat -c%s "${CEF_PATH}.bak" 2>/dev/null || echo 0) -gt 100 ]; then
+                    rm -f "$CEF_PATH" && mv -f "${CEF_PATH}.bak" "$CEF_PATH" && chmod +x "$CEF_PATH" && rm -f "/tmp/cef_swapped.lock"
+                fi
+                pkill -9 -f steamwebhelper.sh 2>/dev/null; killall -9 steamwebhelper 2>/dev/null
+
+                # Restore
+                if [ "$FLAG" -eq 2 ]; then
+                    systemctl --user reset-failed plasma-plasmashell.service 2>/dev/null
+                    V="5"; command -v kstart6 >/dev/null && V="6"
+                    kstart$V kded$V >/dev/null 2>&1 && sleep 2
+                    systemctl --user start plasma-plasmashell.service 2>/dev/null
+                    { kstart$V krunner & } >/dev/null 2>&1
+                    unset V
+                fi
             fi
-            
-            pkill -9 -f steamwebhelper.sh 2>/dev/null
-            killall -9 steamwebhelper 2>/dev/null
-
-            # Desktop Restoration
-            if [ "$FLAG" -eq 2 ]; then
-                systemctl --user reset-failed plasma-plasmashell.service
-                kstart5 kded5 >/dev/null 2>&1 && sleep 2
-                systemctl --user start plasma-plasmashell.service
-                { kstart5 krunner & } >/dev/null 2>&1
-            fi
-        fi
-        sleep 15
-    done
-) &
+            sleep 15
+        done
+    ) &
+fi
 
 if [ ! -f "$STEAMROOT/.switchdeck-initial-launch" ]; then
 	log "creating initial symlinks"
