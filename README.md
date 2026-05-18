@@ -24,6 +24,7 @@ Use Proton 10 or [Proton-10-GE](https://github.com/gloriouseggroll/proton-ge-cus
 ## Requirements
 * [Linux for Switch](https://wiki.switchroot.org/wiki/linux) (Fedora 42 or Ubuntu Noble)
 * [Box64](https://github.com/ptitseb/box64) to run games. Shipped with Fedora 42 by default, install from this [repo](https://github.com/Pi-Apps-Coders/box64-debs) for Ubuntu.
+* Steam and most games require Vulkan 1.2 support. Fedora ships with the latest GPU driver, on Ubuntu Noble it can be [upgraded](https://pastebin.com/ScMRK37p).
 
 ---
 
