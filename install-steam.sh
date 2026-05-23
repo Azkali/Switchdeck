@@ -25,6 +25,47 @@ fi
 STEAMROOT="$HOME/.local/share/Steam"
 STEAMHOME="$HOME/.steam"
 RTARM64ROOT="$STEAMROOT/steamrtarm64"
+DESKTOP_DIR=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
+
+# Uninstall conflicting native packages
+printf "\nChecking for conflicting system packages..\n"
+if command -v apt-get &>/dev/null; then
+    dpkg -l | grep -q "^ii  steam-launcher " && {
+        printf "Found conflicting system steam package. Uninstalling..\n"
+        sudo apt-get remove -y steam-launcher
+    } || true
+elif command -v dnf &>/dev/null; then
+    (rpm -q steam || rpm -q steam-launcher) &>/dev/null && {
+        printf "Found conflicting system steam package. Uninstalling..\n"
+        sudo dnf remove -y steam steam-launcher
+    } || true
+elif command -v pacman &>/dev/null; then
+    pacman -Qq steam &>/dev/null && {
+        printf "Found conflicting system steam package. Uninstalling..\n"
+        sudo pacman -Rns --noconfirm steam
+    } || true
+fi
+
+# Cleanup pre-existing/orphaned steam desktop files
+printf "Cleaning up old desktop shortcuts..\n"
+for file in "$HOME/.local/share/applications/Steam.desktop" \
+            "$HOME/.local/share/applications/steam.desktop" \
+            "/usr/local/share/applications/Steam.desktop" \
+            "/usr/local/share/applications/steam.desktop" \
+            "/usr/share/applications/Steam.desktop" \
+            "/usr/share/applications/steam.desktop" \
+            "$DESKTOP_DIR/Steam.desktop" \
+            "$DESKTOP_DIR/steam.desktop"; do
+    if [ -f "$file" ]; then
+        if [[ "$file" == /usr/* ]]; then
+            sudo rm -f "$file"
+        else
+            rm -f "$file"
+        fi
+    fi
+done
+
+command -v update-desktop-database &>/dev/null && update-desktop-database "$HOME/.local/share/applications" &>/dev/null || true
 
 # Check if either Steam directory exists
 if [ -d "$STEAMROOT" ] || [ -d "$STEAMHOME" ]; then

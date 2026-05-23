@@ -20,12 +20,6 @@ fi
 
 STEAMROOT="$HOME/.local/share/Steam"
 
-# Check for old folder name and update to new structure
-if [ -d "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt" ]; then
-    echo "Old runtime structure detected. Migrating to -arm64 suffix.."
-    mv -f "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt" "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt-arm64"
-fi
-
 echo "Checking for script updates.."
 wget -t 5 -N -P "$STEAMROOT" "https://raw.githubusercontent.com/SildurFX/Switchdeck/refs/heads/main/files/steam/launch-steam.sh"
 wget -t 5 -N -P "$STEAMROOT" "https://raw.githubusercontent.com/SildurFX/Switchdeck/refs/heads/main/files/steam/update-switchdeck.sh"
@@ -35,6 +29,22 @@ chmod +x "$STEAMROOT/launch-steam.sh" "$STEAMROOT/update-switchdeck.sh"
 if [[ "$STEAMROOT/update-switchdeck.sh" -nt "$0" ]]; then
     echo "New version detected. Restarting script..."
     exec "$STEAMROOT/update-switchdeck.sh" "$@"
+fi
+
+# Check for old folder name and update to new structure
+if [ -d "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt" ]; then
+    echo "Old runtime structure detected. Migrating to -arm64 suffix.."
+    mv -f "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt" "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt-arm64"
+fi
+
+# Migrating existing legacy users to official lowercase shortcuts
+DESKTOP_DIR=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
+
+if [ -f "$HOME/.local/share/applications/Steam.desktop" ] || [ -f "$DESKTOP_DIR/Steam.desktop" ]; then
+    echo "Legacy uppercase shortcuts detected. Migrating to official lowercase structure.."
+    rm -f "$HOME/.local/share/applications/Steam.desktop" "$DESKTOP_DIR/Steam.desktop" "$STEAMROOT/.switchdeck-initial-launch"
+    # Run the launcher for 2 seconds to generate the fresh lowercase shortcuts
+    timeout 2s bash "$STEAMROOT/launch-steam.sh" 2>/dev/null || true
 fi
 
 # Verify controller permissions

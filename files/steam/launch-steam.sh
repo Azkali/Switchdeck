@@ -283,7 +283,7 @@ if [ ! -f "$STEAMROOT/.switchdeck-initial-launch" ]; then
     DESKTOP_DIR=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
     mkdir -p "$DESKTOP_DIR"
 
-    DESKTOP_FILE="$MENU_DIR/Steam.desktop"
+    DESKTOP_FILE="$MENU_DIR/steam.desktop"
     cat > "$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Name=Steam
@@ -296,10 +296,10 @@ Categories=Game;
 MimeType=x-scheme-handler/steam;
 EOF
     chmod +x "$DESKTOP_FILE"
-    ln -fs "$DESKTOP_FILE" "$DESKTOP_DIR/Steam.desktop"
+    ln -fs "$DESKTOP_FILE" "$DESKTOP_DIR/steam.desktop"
     update-desktop-database "$MENU_DIR" 2>/dev/null
 
-	touch "$STEAMROOT/.switchdeck-initial-launch"
+    touch "$STEAMROOT/.switchdeck-initial-launch"
 fi
 
 if [ -x "$STEAMROOT/steamrtarm64/steam" ]; then
