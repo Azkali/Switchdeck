@@ -37,10 +37,10 @@ if [ -d "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt" ]; then
     mv -f "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt" "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt-arm64"
 fi
 
-# Migrating existing legacy users to official lowercase shortcuts
+# Migrating existing legacy users to official lowercase shortcuts and adding context menu if missing
 DESKTOP_DIR=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
 
-if [ -f "$HOME/.local/share/applications/Steam.desktop" ] || [ -f "$DESKTOP_DIR/Steam.desktop" ]; then
+if [ -f "$HOME/.local/share/applications/Steam.desktop" ] || [ -f "$DESKTOP_DIR/Steam.desktop" ] || [ ! -f "$STEAMROOT/Switchdeck/switchdeck-add-game" ]; then
     echo "Legacy uppercase shortcuts detected. Migrating to official lowercase structure.."
     rm -f "$HOME/.local/share/applications/Steam.desktop" "$DESKTOP_DIR/Steam.desktop" "$STEAMROOT/.switchdeck-initial-launch"
     # Run the launcher for 2 seconds to generate the fresh lowercase shortcuts
