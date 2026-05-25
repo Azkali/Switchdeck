@@ -208,6 +208,8 @@ if [ -x "$RTARM64ROOT/steam" ]; then
     # Overkill but make sure everything is executable
 	chmod -R +x "$STEAMROOT"
 
-    printf "\nLaunching Steam...\n"
-    exec "$STEAMROOT/launch-steam.sh" "$@"
+    printf "\nInstallation complete!\n"
+    printf "To launch Steam, use the provided desktop shortcuts\n"
+    printf "or run launch-steam.sh in your Steam folder.\n\n"
+    sleep 3
 fi
