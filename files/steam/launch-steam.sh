@@ -304,25 +304,6 @@ Type=Application
 Categories=Game;
 MimeType=x-scheme-handler/steam;
 EOF
-    # Setup desktop path and icon
-    MENU_DIR="$HOME/.local/share/applications"
-    mkdir -p "$MENU_DIR"
-
-    DESKTOP_DIR=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
-    mkdir -p "$DESKTOP_DIR"
-
-    DESKTOP_FILE="$MENU_DIR/steam.desktop"
-    cat > "$DESKTOP_FILE" <<EOF
-[Desktop Entry]
-Name=Steam
-Comment=Launch Steam
-Exec=$HOME/.local/bin/steam %U
-Icon=$STEAMROOT/public/steam_tray_48.tga
-Terminal=false
-Type=Application
-Categories=Game;
-MimeType=x-scheme-handler/steam;
-EOF
     # Only deploy the right-click menu if the user is running KDE Plasma
     if [[ "${XDG_CURRENT_DESKTOP}" == *"KDE"* ]]; then
         KDE_MENU_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/kio/servicemenus"
