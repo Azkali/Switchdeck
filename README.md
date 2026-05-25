@@ -32,6 +32,7 @@
 * [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek) Patch for Steam Proton and [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom).
 * [VKD3D v2.3.1](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) Patch for Steam Proton and [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom).
 * Wine Vulkan extension patch for Proton 10 and [GE-Proton10](https://github.com/gloriouseggroll/proton-ge-custom) to fix Vertex explosions in 32-bit games, caused by broken nvidia drivers.
+* KDE Context Menu: Add to Steam, to easily import non-Steam games.
 
 ---
 
