@@ -160,14 +160,35 @@ if [ ! -d "$STEAMROOT/Switchdeck/VKD3D" ]; then
 fi
 
 # Fix controller permissions
-if [ ! -w /dev/uinput ]; then
-    printf "\nConfiguring controller permissions.. (Requires sudo)\n"
-    sudo sh -c "mkdir -p /etc/udev/rules.d && echo 'KERNEL==\"uinput\", SUBSYSTEM==\"misc\", TAG+=\"uaccess\", OPTIONS+=\"static_node=uinput\"' > /etc/udev/rules.d/70-uinput.rules"
-    sudo modprobe uinput || true
-    
-    # Apply changes immediately
+CONTROLLER_RELOAD=0
+if command -v apt-get &>/dev/null; then
+    dpkg -s steam-devices &>/dev/null || { 
+        printf "\nConfiguring controller permissions.. (Requires sudo)\n"
+        sudo apt-get update && sudo apt-get install -y steam-devices && CONTROLLER_RELOAD=1
+    }
+elif command -v dnf &>/dev/null; then
+    rpm -q steam-devices &>/dev/null || { 
+        printf "\nConfiguring controller permissions.. (Requires sudo)\n"
+        sudo dnf install -y steam-devices && CONTROLLER_RELOAD=1
+    }
+elif command -v pacman &>/dev/null; then
+    pacman -Qi steam-devices &>/dev/null || { 
+        printf "\nConfiguring controller permissions.. (Requires sudo)\n"
+        sudo pacman -S --noconfirm steam-devices && CONTROLLER_RELOAD=1
+    }
+else
+    if [ ! -f /etc/udev/rules.d/70-uinput.rules ]; then
+        printf "\nConfiguring controller permissions.. (Requires sudo)\n"
+        printf "No supported package manager found. Configuring manually..\n"
+        sudo sh -c "mkdir -p /etc/udev/rules.d && echo 'KERNEL==\"uinput\", SUBSYSTEM==\"misc\", TAG+=\"uaccess\", OPTIONS+=\"static_node=uinput\"' > /etc/udev/rules.d/70-uinput.rules"
+        sudo modprobe uinput || true
+        CONTROLLER_RELOAD=1
+    fi
+fi
+
+if [ "$CONTROLLER_RELOAD" -eq 1 ]; then
     sudo udevadm control --reload-rules
-    sudo udevadm trigger --sysname-match=uinput
+    sudo udevadm trigger --sysname-match=uinput 2>/dev/null || sudo udevadm trigger
     printf "\nController permissions applied successfully.\n"
 fi
 
