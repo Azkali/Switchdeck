@@ -16,7 +16,7 @@
 4. Restart Steam to apply the [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek), [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) and Vertex Explosion patch to your Proton version. It's applied on launch.
 5. To launch Steam, use `launch-steam.sh` in your Steam folder or use the provided shortcuts.
 
-**Note:** If Steam updates your Proton version you have to relaunch it to reapply the [DXVK-Sarek,](https://github.com/pythonlover02/DXVK-Sarek) [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) and Vertex Explosion patch.
+**Note:** If Steam updates your Proton version you have to relaunch it to reapply the [DXVK-Sarek,](https://github.com/pythonlover02/DXVK-Sarek) [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) and Vertex Explosion patch. Use Proton 10 or [GE-Proton10](https://github.com/gloriouseggroll/proton-ge-custom) for 32-bit games, the Vertex Explosion patch is applied to both. 
 
 ---
 
