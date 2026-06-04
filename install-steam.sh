@@ -229,6 +229,10 @@ if [ -x "$RTARM64ROOT/steam" ]; then
     # Overkill but make sure everything is executable
 	chmod -R +x "$STEAMROOT"
 
+    # Run the launcher for 2 seconds to generate the shortcuts
+    timeout 2s bash "$STEAMROOT/launch-steam.sh" 2>/dev/null || true
+    pkill -x "steam|steamwebhelper" >/dev/null 2>&1 || true
+
     printf "\nInstallation complete!\n"
     printf "To launch Steam, use the provided desktop shortcuts\n"
     printf "or run launch-steam.sh in your Steam folder.\n\n"
