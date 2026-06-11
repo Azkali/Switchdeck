@@ -24,11 +24,12 @@
 * [Linux for Switch](https://wiki.switchroot.org/wiki/linux) (Fedora 42 or Ubuntu Noble)
 * [Box64](https://github.com/ptitseb/box64) to run games. Shipped with Fedora 42 by default, install from this [repo](https://github.com/Pi-Apps-Coders/box64-debs) for Ubuntu.
 * Steam and most games require Vulkan 1.2 support. Fedora ships with the latest GPU driver, on Ubuntu Noble it can be [upgraded](https://pastebin.com/ScMRK37p).
+* **Recommended:** [RAM OC](https://wiki.switchroot.org/wiki/linux/linux-features#ram_oc0), the Switch shares 4GB between CPU and GPU so overclocking RAM helps a lot.
 
 ---
 
 ## Features
-* `SWITCHDECK_GAMEMODE=1 or 2 %command%`. This launch command for Steam games **frees up 1GB+ of RAM** while keeping Steam Input and Multiplayer functional. **Mode 1** unloads steamwebhelper on launch and restores it on exit. **Mode 2** also stops KDE Plasma & background services. It will take a few seconds to restore Steam or KDE after the game exits.
+* `SWITCHDECK_GAMEMODE=1 or 2 %command%`. Launching Steam games with this command **frees up over 1GB of RAM**. In **Mode 1** it unloads steamwebhelper on game launch and restores it on exit, online multiplayer is still supported in this mode. In **Mode 2** it also stops KDE Plasma & background services. Restoring Steam or KDE after game exit is gonna take a few seconds.
 * [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek) Patch for Steam Proton and [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom).
 * [VKD3D v2.3.1](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) Patch for Steam Proton and [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom).
 * Wine Vulkan extension patch for Proton 10 and [GE-Proton10](https://github.com/gloriouseggroll/proton-ge-custom) to fix Vertex explosions in 32-bit games, caused by broken nvidia drivers.
