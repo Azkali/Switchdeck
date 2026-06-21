@@ -55,6 +55,16 @@ export BOX64_LOG=0                      # [0 1 2 3] Enable or disable Box64 logs
 export WINEDEBUG=-all                   # https://gitlab.winehq.org/wine/wine/-/wikis/Debug-Channels
 export DXVK_LOG_LEVEL=none              # [none error warn info debug] Controls message logging
 
+# Proton 11 (ARM64) ships wineopenxr.dll built for ARMv8.1-A (inline LSE atomics).
+# On ARMv8.0-A CPUs without LSE -- the Tegra X1 Cortex-A57 (Nintendo Switch) -- its
+# first LSE op (e.g. swpal) raises SIGILL the moment Proton maps it, crashing the
+# game ("illegal instruction in 64-bit code ... wineopenxr"). It is an OpenXR/VR
+# component unused by flat-screen games, and the client-side -vrskip flag does not
+# stop Proton loading it, so disable the DLL outright on hosts that lack LSE.
+if ! grep -qw atomics /proc/cpuinfo; then
+    export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:+$WINEDLLOVERRIDES;}wineopenxr="
+fi
+
 # Steam launch flags:
 STEAM_FLAGS=""
 STEAM_FLAGS+=" -vrskip"                 # Skip VR initialization entirely no matter who asks for it
