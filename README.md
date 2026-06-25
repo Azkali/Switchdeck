@@ -23,7 +23,7 @@
 ## Requirements
 * [Linux for Switch](https://wiki.switchroot.org/wiki/linux) (Fedora 42 or Ubuntu Noble)
 * [Box64](https://github.com/ptitseb/box64) to run games. Shipped with Fedora 42 by default, install from this [repo](https://github.com/Pi-Apps-Coders/box64-debs) for Ubuntu.
-* Steam and most games require Vulkan 1.2 support. Fedora ships with the latest GPU driver, on Ubuntu Noble it can be [upgraded](https://pastebin.com/ScMRK37p).
+* Vulkan 1.2 Support: Required by Steam and most games. On Ubuntu Noble, you must manually [update your GPU driver](https://pastebin.com/ScMRK37p). Fedora ships with the latest driver out of the box.
 * **Recommended:** [RAM OC](https://wiki.switchroot.org/wiki/linux/linux-features#ram_oc0), the Switch shares 4GB between CPU and GPU so overclocking RAM helps a lot.
 
 ---
@@ -44,7 +44,8 @@
 * If a game crashes on launch try OpenGL instead: `PROTON_USE_WINED3D=1 %command%`.
 * [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos/releases) and [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom) can be used instead of Valve-Proton. Some games may only work with [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom).
 * For older games, you may need to force Proton 10+ in the settings, as Steam often defaults to unsupported older versions.
-* The Tegra X1 GPU only supports up to Vulkan API 1.2 that's why [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek) and [VKD3D v2.3.1](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) are patched into Proton.
+* Game compatibility is inconsistent, not every title is supported or fully playable.
+* The Switch only supports up to Vulkan 1.2, that's why [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek) and an old version of [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) are patched in to Proton.
 
 ---
 
