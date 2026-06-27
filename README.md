@@ -17,7 +17,7 @@
 5. Go to **Settings** -> **Controller:** -> **Show Advanced Settings:** Enable "Combine Joycon Pairs" and Enable Steam Input for Pro and Generic Controller.
 6. Restart Steam to apply the [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek), [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) and Vertex Explosion patch to your Proton version. It's applied on launch.
 
-**Note:** If Steam updates your Proton version you have to relaunch it to reapply the [DXVK-Sarek,](https://github.com/pythonlover02/DXVK-Sarek) [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) and Vertex Explosion patch. Use Proton 10 or [GE-Proton10](https://github.com/gloriouseggroll/proton-ge-custom) for 32-bit games, the Vertex Explosion patch is applied to both. 
+**Note:** If Steam updates your Proton version you have to relaunch it to reapply the [DXVK-Sarek,](https://github.com/pythonlover02/DXVK-Sarek) [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) and Vertex Explosion patch.
 
 ---
 
@@ -33,7 +33,7 @@
 * `SWITCHDECK_GAMEMODE=1 or 2 %command%`. Launching Steam games with this command **frees up over 1GB of RAM**. In **Mode 1** it unloads steamwebhelper on game launch and restores it on exit, online multiplayer is still supported in this mode. In **Mode 2** it also stops KDE Plasma & background services. Restoring Steam or KDE after game exit is gonna take a few seconds.
 * [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek) Patch for Steam Proton and [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom).
 * [VKD3D v2.3.1](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) Patch for Steam Proton and [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom).
-* Wine Vulkan extension patch for Proton 10 and [GE-Proton10](https://github.com/gloriouseggroll/proton-ge-custom) to fix Vertex explosions in 32-bit games, caused by broken nvidia drivers.
+* Wine Vulkan extension patch for Proton and [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom) to fix Vertex explosions in 32-bit games, caused by broken nvidia drivers.
 * KDE Context Menu: Add to Steam, to easily import non-Steam games.
 
 ---
@@ -41,11 +41,11 @@
 ## Information
 * To update Switchdeck simply run `update-switchdeck.sh` in your Steam folder.
 * Several launch commands are defined in `launch-steam.sh`. Feel free to tweak them to fit your needs. Changing `STEAMDECK_MODE="false"` to `true` at the top enables steamdeck / big picture mode.
+* [Game compatibility list](https://docs.google.com/spreadsheets/d/1UrLwRaIZGAL6J7l9QK_DO4MB45KzIUKIfKZIOE4hid4). Not every title is supported or fully playable.
 * `wineesync` is disabled in `launch-steam.sh` because it causes crashes with dxvk / vulkan.
-* If a game crashes on launch try OpenGL instead: `PROTON_USE_WINED3D=1 %command%`.
 * [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos/releases) and [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom) can be used instead of Valve-Proton. Some games may only work with [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom).
 * For older games, you may need to force Proton 10+ in the settings, as Steam often defaults to unsupported older versions.
-* [Game compatibility list](https://docs.google.com/spreadsheets/d/1UrLwRaIZGAL6J7l9QK_DO4MB45KzIUKIfKZIOE4hid4). Not every title is supported or fully playable.
+* If a game crashes on launch try OpenGL instead: `PROTON_USE_WINED3D=1 %command%`.
 * The Switch only supports up to Vulkan 1.2, that's why [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek) and an old version of [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) are patched in to Proton.
 
 ---
