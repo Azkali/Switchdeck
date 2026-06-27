@@ -14,7 +14,8 @@
 2. Use the shortcut or `launch-steam.sh` in your Steam folder to launch Steam.
 3. In Steam go to **Settings** -> **Library** and turn on: Low Bandwidth, Low Performance and Disable Community Content.
 4. Go to **Settings** -> **Compatibility** and select either Proton 10, 11 or Experimental. You can also download them manually in your library.
-5. Restart Steam to apply the [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek), [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) and Vertex Explosion patch to your Proton version. It's applied on launch.
+5. Go to **Settings** -> **Controller:** -> **Show Advanced Settings:** Enable "Combine Joycon Pairs" and Enable Steam Input for Pro and Generic Controller.
+6. Restart Steam to apply the [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek), [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) and Vertex Explosion patch to your Proton version. It's applied on launch.
 
 **Note:** If Steam updates your Proton version you have to relaunch it to reapply the [DXVK-Sarek,](https://github.com/pythonlover02/DXVK-Sarek) [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) and Vertex Explosion patch. Use Proton 10 or [GE-Proton10](https://github.com/gloriouseggroll/proton-ge-custom) for 32-bit games, the Vertex Explosion patch is applied to both. 
 
@@ -44,7 +45,7 @@
 * If a game crashes on launch try OpenGL instead: `PROTON_USE_WINED3D=1 %command%`.
 * [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos/releases) and [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom) can be used instead of Valve-Proton. Some games may only work with [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom).
 * For older games, you may need to force Proton 10+ in the settings, as Steam often defaults to unsupported older versions.
-* Game compatibility is inconsistent, not every title is supported or fully playable.
+* [Game compatibility list](https://docs.google.com/spreadsheets/d/1UrLwRaIZGAL6J7l9QK_DO4MB45KzIUKIfKZIOE4hid4). Not every title is supported or fully playable.
 * The Switch only supports up to Vulkan 1.2, that's why [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek) and an old version of [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) are patched in to Proton.
 
 ---
