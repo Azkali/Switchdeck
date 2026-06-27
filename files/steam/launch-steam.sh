@@ -159,7 +159,7 @@ else
     log "Source folders missing. Run update-switchdeck.sh"
 fi
 
-# Patch out extension VK_EXT_external_memory_host in Proton 10 to fix 32-bit games:
+# Patch out extension VK_EXT_external_memory_host in Proton 10 to fix vertex explosions in 32-bit games:
 find "$STEAMROOT/steamapps/common" "$STEAMROOT/compatibilitytools.d" -maxdepth 1 \( -name "Proton 10*" -o -name "GE-Proton10*" \) 2>/dev/null | while read -r p_dir; do
     p="$p_dir/files"
     [ -d "$p" ] || continue
@@ -180,6 +180,30 @@ find "$STEAMROOT/steamapps/common" "$STEAMROOT/compatibilitytools.d" -maxdepth 1
     fi
     if [ "$PATCHED_ANY" = true ]; then
         log "Applied 32-bit patch to: $(basename "$p_dir")"
+    fi
+done
+
+# Patch out extension VK_EXT_external_memory_host in Proton 11 / GE-Proton11 / Experimental / Hotfix to fix vertex explosions in 32-bit games:
+find "$STEAMROOT/steamapps/common" "$STEAMROOT/compatibilitytools.d" -maxdepth 1 \( -name "Proton 11*" -o -name "GE-Proton11*" -o -name "Proton - Experimental" -o -name "Proton Hotfix" \) 2>/dev/null | while read -r p_dir; do
+    p="$p_dir/files"
+    [ -d "$p" ] || continue
+    LIB32="$p/lib/wine/i386-unix/win32u.so"
+    LIB64="$p/lib/wine/x86_64-unix/win32u.so"
+    PATCHED_ANY=false
+    if [ -f "$LIB32" ]; then
+         if strings "$LIB32" | grep -a "VK_EXT_external_memory_host" >/dev/null; then
+            sed -i 's/VK_EXT_external_memory_host/VK_EXT_external_memory_Xost/g' "$LIB32"
+            PATCHED_ANY=true
+         fi
+    fi
+    if [ -f "$LIB64" ]; then
+         if strings "$LIB64" | grep -a "VK_EXT_external_memory_host" >/dev/null; then
+            sed -i 's/VK_EXT_external_memory_host/VK_EXT_external_memory_Xost/g' "$LIB64"
+            PATCHED_ANY=true
+         fi
+    fi
+    if [ "$PATCHED_ANY" = true ]; then
+        log "Applied winevulkan patch to: $(basename "$p_dir")"
     fi
 done
 
