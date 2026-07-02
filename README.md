@@ -23,9 +23,9 @@
 
 ## Requirements
 * [Linux for Switch:](https://wiki.switchroot.org/wiki/linux) Kubuntu Noble or Fedora 42. (Fedora currently has some WIP changes that may be unstable.)
-* [Box64](https://github.com/ptitseb/box64) to run games. Shipped with Fedora 42 by default, install from this [repo](https://github.com/Pi-Apps-Coders/box64-debs) for Ubuntu.
-* Vulkan 1.2 Support: Required by Steam and most games. On Ubuntu Noble, you must manually [update your GPU driver](https://pastebin.com/ScMRK37p). Fedora ships with the latest driver out of the box.
-* **Recommended:** [RAM OC](https://wiki.switchroot.org/wiki/linux/linux-features#ram_oc0), the Switch shares 4GB between CPU and GPU so overclocking RAM helps a lot.
+* [Box64](https://github.com/ptitseb/box64) to run games. Shipped with Fedora 42 by default. Switchdeck installs it for you on Ubuntu.
+* **Vulkan 1.2 Support:** Fedora ships with the latest GPU driver. Switchdeck updates it for you on Ubuntu.
+* [RAM OC:](https://wiki.switchroot.org/wiki/linux/linux-features#ram_oc0) Nintendo Switch has 4GB shared between CPU and GPU so overclocking RAM helps a lot.
 
 ---
 
