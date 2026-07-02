@@ -22,23 +22,54 @@ if [ ! -t 0 ]; then
 fi
 
 # Setup
-STEAMROOT="$HOME/.local/share/Steam"
 STEAMHOME="$HOME/.steam"
+STEAMROOT="$HOME/.local/share/Steam"
 RTARM64ROOT="$STEAMROOT/steamrtarm64"
 DESKTOP_DIR=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
 
-# Uninstall conflicting native packages
-printf "\nChecking for conflicting system packages..\n"
+# Uninstall conflicting packages and run Ubuntu specific setup
 if command -v apt-get &>/dev/null; then
     dpkg -l | grep -q "^ii  steam-launcher " && {
-        printf "Found conflicting system steam package. Uninstalling..\n"
-        sudo apt-get remove -y steam-launcher
-    } || true
+    printf "Found conflicting system steam package. Uninstalling..\n"
+    sudo apt-get remove -y steam-launcher
+} || true
+
+# check and install box64
+if ! command -v box64 &>/dev/null; then
+    printf "\nBox64 not found. Installing Box64 from Pi-Apps repository...\n"
+    wget -qO- "https://pi-apps-coders.github.io/box64-debs/KEY.gpg" | sudo gpg --dearmor -o /usr/share/keyrings/box64-archive-keyring.gpg
+    echo "Types: deb
+URIs: https://Pi-Apps-Coders.github.io/box64-debs/debian
+Suites: ./
+Signed-By: /usr/share/keyrings/box64-archive-keyring.gpg" | sudo tee /etc/apt/sources.list.d/box64.sources >/dev/null
+    sudo apt-get update -y
+    sudo apt-get install -y box64-tegrax1
+    sudo systemctl restart systemd-binfmt || true
+    printf "Box64 installation complete.\n"
+else
+    printf "Box64 is already installed. Skipping installation.\n"
+fi
+
+# check and update GPU drivers to support vulkan 1.2
+if [ ! -f /etc/apt/sources.list.d/theofficialgman-L4T-32-7.list ]; then
+    printf "\nUpgrading GPU Drivers for Vulkan 1.2 support...\n"
+    echo "deb [signed-by=/etc/apt/keyrings/theofficialgman-L4T.asc] https://theofficialgman.github.io/l4t-debs/ l4t noble-32-7" | sudo tee /etc/apt/sources.list.d/theofficialgman-L4T-32-7.list
+    sudo rm -f /etc/apt/preferences.d/00-switch-bsp-restrictions
+    sudo apt-get update -y
+    sudo apt install -y -o Dpkg::Options::="--force-confdef" nvidia-bsp-32-7
+    printf "GPU Drivers successfully upgraded. It is recommended to restart your system.\n"
+    sleep 2
+else
+    printf "Latest GPU driver is already installed. Skipping installation.\n"
+fi   
+
+# fedora
 elif command -v dnf &>/dev/null; then
     (rpm -q steam || rpm -q steam-launcher) &>/dev/null && {
         printf "Found conflicting system steam package. Uninstalling..\n"
         sudo dnf remove -y steam steam-launcher
     } || true
+# arch
 elif command -v pacman &>/dev/null; then
     pacman -Qq steam &>/dev/null && {
         printf "Found conflicting system steam package. Uninstalling..\n"
@@ -47,7 +78,6 @@ elif command -v pacman &>/dev/null; then
 fi
 
 # Cleanup pre-existing/orphaned steam desktop files
-printf "Cleaning up old desktop shortcuts..\n"
 for file in "$HOME/.local/share/applications/Steam.desktop" \
             "$HOME/.local/share/applications/steam.desktop" \
             "/usr/local/share/applications/Steam.desktop" \
