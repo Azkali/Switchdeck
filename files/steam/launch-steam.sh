@@ -42,7 +42,7 @@ export __GL_THREADED_OPTIMIZATIONS=1    # Enable driver-side multi-threading to 
 export DXVK_ALL_CORES=1                 # Overwrite the way we assign cores to compile shaders. By default use roughly half the available CPU cores for background compilation.
 
 # Box64:
-export BOX64_PROFILE=fast               # [safest safe default fast fastest] Predefined environment variables with compatibility or performance in mind
+export BOX64_PROFILE=default            # [safest safe default fast fastest] Predefined environment variables. Default performs better than fast/fastest on Switch due to more relaxed Memory configuration.
 export BOX64_X87_NO80BITS=1             # [0=default 1] Behaviour of x87 80bits long double.
 export BOX64_DYNAREC_CALLRET=1          # [0=default 1 2] Optimize CALL/RET opcodes.
 export BOX64_DYNAREC_BIGBLOCK=3         # [0 1 2=default 3] Enable building bigger DynaRec code blocks for better performance
