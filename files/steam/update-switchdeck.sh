@@ -7,87 +7,47 @@ set -o pipefail
 shopt -s failglob
 set -u
 
-# Check for terminal
-if [ ! -t 0 ]; then
-    if command -v konsole >/dev/null 2>&1; then
-        exec konsole -e "$0" "$@"
-    elif command -v gnome-terminal >/dev/null 2>&1; then
-        exec gnome-terminal -- "$0" "$@"
-    elif command -v xterm >/dev/null 2>&1; then
-        exec xterm -e "$0" "$@"
-    fi
-fi
+echo "Checking for Switchdeck updates.."
 
 STEAMROOT="$HOME/.local/share/Steam"
+SWITCHDECK_DIR="$HOME/.local/share/Steam/Switchdeck"
 
-echo "Checking for script updates.."
-wget -t 5 -N -P "$STEAMROOT" "https://raw.githubusercontent.com/SildurFX/Switchdeck/refs/heads/main/files/steam/launch-steam.sh"
-wget -t 5 -N -P "$STEAMROOT" "https://raw.githubusercontent.com/SildurFX/Switchdeck/refs/heads/main/files/steam/update-switchdeck.sh"
-chmod +x "$STEAMROOT/launch-steam.sh" "$STEAMROOT/update-switchdeck.sh"
-
-# Restart if update-switchdeck.sh was updated
-if [[ "$STEAMROOT/update-switchdeck.sh" -nt "$0" ]]; then
-    echo "New version detected. Restarting script..."
-    exec "$STEAMROOT/update-switchdeck.sh" "$@"
-fi
-
-# Check for old folder name and update to new structure
-if [ -d "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt" ]; then
-    echo "Old runtime structure detected. Migrating to -arm64 suffix.."
-    mv -f "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt" "$STEAMROOT/steamrtarm64/pv-runtime/steam-runtime-steamrt-arm64"
-fi
-
-# Migrating existing legacy users to official lowercase shortcuts and adding context menu if missing
-DESKTOP_DIR=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
-
-if [ -f "$HOME/.local/share/applications/Steam.desktop" ] || [ -f "$DESKTOP_DIR/Steam.desktop" ] || [ ! -f "$STEAMROOT/Switchdeck/switchdeck-add-game" ]; then
-    echo "Legacy uppercase shortcuts detected. Migrating to official lowercase structure.."
-    rm -f "$HOME/.local/share/applications/Steam.desktop" "$DESKTOP_DIR/Steam.desktop" "$STEAMROOT/.switchdeck-initial-launch"
-    # Run the launcher for 2 seconds to generate the fresh lowercase shortcuts
-    timeout 2s bash "$STEAMROOT/launch-steam.sh" 2>/dev/null || true
-fi
-
-# Fix controller permissions
-CONTROLLER_RELOAD=0
-if command -v apt-get &>/dev/null; then
-    dpkg -s steam-devices &>/dev/null || { 
-        printf "\nConfiguring controller permissions.. (Requires sudo)\n"
-        sudo apt-get update && sudo apt-get install -y steam-devices
-        sudo rm -f /etc/udev/rules.d/70-uinput.rules
-        CONTROLLER_RELOAD=1
-    }
-elif command -v dnf &>/dev/null; then
-    rpm -q steam-devices &>/dev/null || { 
-        printf "\nConfiguring controller permissions.. (Requires sudo)\n"
-        sudo dnf install -y steam-devices
-        sudo rm -f /etc/udev/rules.d/70-uinput.rules
-        CONTROLLER_RELOAD=1
-    }
-elif command -v pacman &>/dev/null; then
-    pacman -Qi steam-devices &>/dev/null || { 
-        printf "\nConfiguring controller permissions.. (Requires sudo)\n"
-        sudo pacman -S --noconfirm steam-devices
-        sudo rm -f /etc/udev/rules.d/70-uinput.rules
-        CONTROLLER_RELOAD=1
-    }
-else
-    if [ ! -f /etc/udev/rules.d/70-uinput.rules ]; then
-        printf "\nConfiguring controller permissions.. (Requires sudo)\n"
-        printf "No supported package manager found. Configuring manually..\n"
-        sudo sh -c "mkdir -p /etc/udev/rules.d && echo 'KERNEL==\"uinput\", SUBSYSTEM==\"misc\", TAG+=\"uaccess\", OPTIONS+=\"static_node=uinput\"' > /etc/udev/rules.d/70-uinput.rules"
-        sudo modprobe uinput || true
-        CONTROLLER_RELOAD=1
+# Migration
+MIGRATION_FLAG="$SWITCHDECK_DIR/.migration"
+if [ ! -f "$MIGRATION_FLAG" ]; then
+    echo "Migrating to new Switchdeck version.."
+    if wget -q --show-progress -c -t 5 -O "$STEAMROOT/linux_x86_64.zip" "https://github.com/SildurFX/Switchdeck/raw/refs/heads/main/files/downgrade/linux_x86_64.zip"; then
+        unzip -q -o "$STEAMROOT/linux_x86_64.zip" -d "$STEAMROOT"
+        rm -f "$STEAMROOT/linux_x86_64.zip"
+        touch "$MIGRATION_FLAG"
+        echo "Migration applied successfully."
     fi
 fi
 
-if [ "$CONTROLLER_RELOAD" -eq 1 ]; then
-    sudo udevadm control --reload-rules
-    sudo udevadm trigger --sysname-match=uinput 2>/dev/null || sudo udevadm trigger
-    printf "\nController permissions applied successfully.\n"
+# Check for Switchdeck updates
+LAUNCH_SHA_FILE="$SWITCHDECK_DIR/launch-steam.sha"
+UPDATE_SHA_FILE="$SWITCHDECK_DIR/update-switchdeck.sha"
+LAUNCH_JSON=$(wget -qO- "https://api.github.com/repos/SildurFX/Switchdeck/contents/files/steam/launch-steam.sh?ref=main")
+UPDATE_JSON=$(wget -qO- "https://api.github.com/repos/SildurFX/Switchdeck/contents/files/steam/update-switchdeck.sh?ref=main")
+LATEST_LAUNCH_SHA=$(echo "$LAUNCH_JSON" | sed -n 's/.*"sha": "\([^"]*\)".*/\1/p' | head -n 1)
+LATEST_UPDATE_SHA=$(echo "$UPDATE_JSON" | sed -n 's/.*"sha": "\([^"]*\)".*/\1/p' | head -n 1)
+
+if [ "$LATEST_LAUNCH_SHA" != "$(cat "$LAUNCH_SHA_FILE" 2>/dev/null)" ] || [ ! -f "$STEAMROOT/launch-steam.sh" ]; then
+    wget -q --header="Accept: application/vnd.github.v3.raw" -O "$STEAMROOT/launch-steam.sh" "https://api.github.com/repos/SildurFX/Switchdeck/contents/files/steam/launch-steam.sh?ref=main"
+    echo "$LATEST_LAUNCH_SHA" > "$LAUNCH_SHA_FILE"
+    echo "Updating launch script... You may have to restart Steam to fully apply the update."
+    sleep 2
+fi
+if [ "$LATEST_UPDATE_SHA" != "$(cat "$UPDATE_SHA_FILE" 2>/dev/null)" ] || [ ! -f "$STEAMROOT/update-switchdeck.sh" ]; then
+    wget -q --header="Accept: application/vnd.github.v3.raw" -O "$STEAMROOT/update-switchdeck.sh" "https://api.github.com/repos/SildurFX/Switchdeck/contents/files/steam/update-switchdeck.sh?ref=main"
+    echo "$LATEST_UPDATE_SHA" > "$UPDATE_SHA_FILE"
+    echo "Updating update script... You may have to restart Steam to fully apply the update."
+    sleep 2
 fi
 
+chmod +x "$STEAMROOT/launch-steam.sh" "$STEAMROOT/update-switchdeck.sh"
+
 # Check for DXVK-Sarek update
-SWITCHDECK_DIR="$HOME/.steam/steam/Switchdeck"
 DX_DIR="$SWITCHDECK_DIR/DXVK"
 VERSION_FILE="$SWITCHDECK_DIR/dxvk-sarek_version.txt"
 LATEST_JSON=$(wget -qO- "https://api.github.com/repos/pythonlover02/DXVK-Sarek/releases/latest")
@@ -98,7 +58,7 @@ if [ "$LATEST_TAG" != "$(cat "$VERSION_FILE" 2>/dev/null)" ] || [ ! -d "$DX_DIR"
     DXVK_URL=$(echo "$LATEST_JSON" | sed -n 's/.*"browser_download_url": "\([^"]*\)".*/\1/p' | head -1)
 
     # protection fallback
-    [ -z "$DXVK_URL" ] && { echo "Error: GitHub API URL empty. Aborting update to protect current installation."; exit 1; }
+    [ -z "$DXVK_URL" ] && { echo "Error: GitHub API URL empty. Aborting update to protect current installation."; return 1; }
 
     # Clean up old folders if they exist
     rm -rf "$SWITCHDECK_DIR/x64" "$SWITCHDECK_DIR/x32"
@@ -129,33 +89,3 @@ if [ ! -d "$VK_DIR" ]; then
     
     echo "VKD3D added successfully."
 fi
-
-read -p "Update Steam? (y/N): " choice
-[[ "$choice" =~ ^[yY] ]] || { echo "Skipping"; exit; }
-echo "Updating Steam.."
-mv -f "$STEAMROOT/steam.cfg" "$STEAMROOT/steam.cfg.bak"
-mv -f "$STEAMROOT/linuxarm64" "$STEAMROOT/linuxarm64.bak"
-mv -f "$STEAMROOT/steamrtarm64" "$STEAMROOT/steamrtarm64.bak"
-
-# Point LD_LIBRARY_PATH to the .bak location
-_rtarm=$(ls -d "$STEAMROOT/steamrtarm64.bak/pv-runtime/steam-runtime-steamrt-arm64"/steamrt3c_platform_*/files 2>/dev/null | head -1)
-export LD_LIBRARY_PATH="$STEAMROOT/steamrtarm64.bak${_rtarm:+:$_rtarm/lib/aarch64-linux-gnu:$_rtarm/lib}:${LD_LIBRARY_PATH-}"
-
-# Run updater from the .bak folder
-"$STEAMROOT/steamrtarm64.bak/steam" -forcesteamupdate -forcepackagedownload -exitsteam & wait $!
-
-echo "Merging binaries.."
-mv -f "$STEAMROOT/steam.cfg.bak" "$STEAMROOT/steam.cfg"
-rm -rf "$STEAMROOT/linuxarm64" && mv -f "$STEAMROOT/linuxarm64.bak" "$STEAMROOT/linuxarm64"
-
-# Selective Merge, keep new runtime, restore ARM64 binaries
-if [ -d "$STEAMROOT/steamrtarm64/pv-runtime" ]; then
-    mv "$STEAMROOT/steamrtarm64/pv-runtime" "$STEAMROOT/tmp_rt"
-    rm -rf "$STEAMROOT/steamrtarm64" && mv "$STEAMROOT/steamrtarm64.bak" "$STEAMROOT/steamrtarm64"
-    rm -rf "$STEAMROOT/steamrtarm64/pv-runtime" && mv "$STEAMROOT/tmp_rt" "$STEAMROOT/steamrtarm64/pv-runtime"
-else
-    rm -rf "$STEAMROOT/steamrtarm64" && mv "$STEAMROOT/steamrtarm64.bak" "$STEAMROOT/steamrtarm64"
-fi
-
-chmod -R +x "$STEAMROOT/linuxarm64" "$STEAMROOT/steamrtarm64"
-echo "Update complete!"

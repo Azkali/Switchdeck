@@ -240,6 +240,10 @@ if [ -x "$RTARM64ROOT/steam" ]; then
         tar -xzf "$TEMP_SD/files/downgrade/linuxarm64.tar.gz" -C "$STEAMROOT/linuxarm64"
     fi
 
+    if [ -f "$TEMP_SD/files/downgrade/linux_x86_64.zip" ]; then
+        unzip -q -o "$TEMP_SD/files/downgrade/linux_x86_64.zip" -d "$STEAMROOT"
+    fi
+
     # Reassemble and extract steamrtarm64
     if [ -f "$TEMP_SD/files/downgrade/steamrtarm64.tar.gz.partaa" ]; then
         mkdir -p "$STEAMROOT/steamrtarm64"

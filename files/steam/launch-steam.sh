@@ -22,8 +22,9 @@
 ########################################################################################################################################
 
 # Switchdeck:
+SD_GAMEMODE="true"                      # Toggle switchdeck gamemode.
+UPDATE_CHECK="true"                     # Toggle switchdeck update check on launch.
 STEAMDECK_MODE="false"                  # Toggle steamdeck / big picture mode for steam.
-# DISABLE_GAMEMODE=1                    # Disable switchdeck gamemode.
 
 # Proton:
 export PROTON_USE_WOW64=1               # Use wow64 mode
@@ -101,24 +102,48 @@ else
     exec > /dev/null 2>&1
 fi
 
-# Steam exports
+# Steam setup
 export TEXTDOMAIN=steam
 export TEXTDOMAINDIR=/usr/share/locale
 export SYSTEM_PATH="$PATH"
 export SYSTEM_LD_LIBRARY_PATH="${LD_LIBRARY_PATH-}"
 export SYSTEM_ZENITY="$(which zenity 2>/dev/null)" # Prefer host zenity binary if available
+MAGIC_RESTART_EXITCODE=42
 if [ -z ${SYSTEM_ZENITY} ]; then
 	export STEAM_ZENITY="zenity"
 else
 	export STEAM_ZENITY="${SYSTEM_ZENITY}"
 fi
 
-MAGIC_RESTART_EXITCODE=42
-STEAMROOT="$HOME/.local/share/Steam"
 STEAMHOME="$HOME/.steam"
+STEAMROOT="$HOME/.local/share/Steam"
 SWITCHDECK_DIR="$STEAMROOT/Switchdeck"
 CEF_PATH="$STEAMROOT/steamrtarm64/steamwebhelper.sh"
 CEF_DUMMY="${CEF_PATH}.dummy"
+
+# check for updates, spawn terminal
+ONLINE=0
+if [ "$UPDATE_CHECK" = "true" ] && [ ! -t 0 ]; then
+    if ping -q -c 1 -W 2 8.8.8.8 &>/dev/null; then
+        ONLINE=1
+    fi
+fi
+if [ "$ONLINE" -eq 1 ]; then
+    UPDATE_CMD="source '$STEAMROOT/update-switchdeck.sh'; sleep 1; [[ '$STEAMROOT/launch-steam.sh' -nt '$0' || '$STEAMROOT/update-switchdeck.sh' -nt '$0' ]] && exit 0"
+    if command -v konsole >/dev/null 2>&1; then
+        konsole -e bash -c "$UPDATE_CMD"
+    elif command -v gnome-terminal >/dev/null 2>&1; then
+        gnome-terminal --wait -- bash -c "$UPDATE_CMD"
+    elif command -v xterm >/dev/null 2>&1; then
+        xterm -e bash -c "$UPDATE_CMD"
+    fi
+fi
+if [[ "$STEAMROOT/launch-steam.sh" -nt "$0" ]]; then
+    exec "$0" "$@"
+fi
+if [[ "$STEAMROOT/update-switchdeck.sh" -nt "$0" ]]; then
+    exec "$0" "$@"
+fi
 
 # symlink folder '0' to /dev/null to stop proton initialization on every launch
 C0="$STEAMROOT/steamapps/compatdata/0"
@@ -208,13 +233,16 @@ find "$STEAMROOT/steamapps/common" "$STEAMROOT/compatibilitytools.d" -maxdepth 1
 done
 
 # Switchdeck Gamemode
-if [ "${DISABLE_GAMEMODE:-0}" -ne 1 ]; then
+if [ "$SD_GAMEMODE" = "true" ]; then
     # Preparation & Crash Recovery
     [ ! -f "$CEF_DUMMY" ] && printf "#!/bin/bash\n# Gamemode Dummy\nsleep infinity\n" > "$CEF_DUMMY" && chmod +x "$CEF_DUMMY"
     [ -f "${CEF_PATH}.bak" ] && { [ $(stat -c%s "$CEF_PATH" 2>/dev/null || echo 0) -lt 100 ] || [ -f "/tmp/cef_swapped.lock" ]; } && mv -f "${CEF_PATH}.bak" "$CEF_PATH" && chmod +x "$CEF_PATH" && rm -f "/tmp/cef_swapped.lock"
     # Capture the main script's PID to track its lifecycle
     PARENT_PID=$$
     (
+        # silence logs / terminal
+        exec 2>/dev/null
+
         # low prio loop and prevent multiple loops
         renice -n 19 -p $BASHPID >/dev/null 2>&1
         LOCK_FILE="/tmp/switchdeck_gamemode.pid"
