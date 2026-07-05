@@ -263,9 +263,85 @@ if [ -x "$RTARM64ROOT/steam" ]; then
     # Overkill but make sure everything is executable
 	chmod -R +x "$STEAMROOT"
 
-    # Run the launcher for 2 seconds to generate the shortcuts
-    timeout 2s bash "$STEAMROOT/launch-steam.sh" 2>/dev/null || true
-    pkill -x "steam|steamwebhelper" >/dev/null 2>&1 || true
+    # don't trigger old version migration on a fresh install
+    touch "$STEAMROOT/Switchdeck/.migration"
+
+    # Setup
+	ln -fsn "$STEAMROOT" "$STEAMHOME/root"
+	ln -fsn "$STEAMROOT" "$STEAMHOME/steam"	
+	ln -fsn "$STEAMROOT/linux32" "$STEAMHOME/sdk32"
+	ln -fsn "$STEAMROOT/linux64" "$STEAMHOME/sdk64"
+	ln -fsn "$STEAMROOT/linuxarm64" "$STEAMHOME/sdkarm64"
+	ln -fsn "$STEAMROOT/ubuntu12_32" "$STEAMHOME/bin32"
+	ln -fsn "$STEAMROOT/ubuntu12_64" "$STEAMHOME/bin64"	
+	ln -fsn "$STEAMHOME/bin32" "$STEAMHOME/bin"
+	ln -fsn "$STEAMROOT/steamrtarm64" "$STEAMROOT/steamrtarm32"	
+
+	# Add steam to path
+	mkdir -p "$HOME/.local/bin"
+	ln -fsn "$STEAMROOT/launch-steam.sh" "$HOME/.local/bin/steam"
+
+    # Setup desktop path and icon
+    MENU_DIR="$HOME/.local/share/applications"
+    mkdir -p "$MENU_DIR"
+
+    DESKTOP_DIR=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
+    mkdir -p "$DESKTOP_DIR"
+
+    DESKTOP_FILE="$MENU_DIR/steam.desktop"
+    cat > "$DESKTOP_FILE" <<EOF
+[Desktop Entry]
+Name=Steam
+Comment=Launch Steam
+Exec=$HOME/.local/bin/steam %U
+Icon=$STEAMROOT/public/steam_tray_48.tga
+Terminal=false
+Type=Application
+Categories=Game;
+MimeType=x-scheme-handler/steam;
+EOF
+    # Only deploy the right-click menu if the user is running KDE Plasma
+    if [[ "${XDG_CURRENT_DESKTOP}" == *"KDE"* ]]; then
+        KDE_MENU_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/kio/servicemenus"
+        [ -d "$HOME/.local/share/kservices5" ] && KDE_MENU_DIR="$HOME/.local/share/kservices5/ServiceMenus"
+        mkdir -p "$KDE_MENU_DIR" "$STEAMROOT/Switchdeck"
+        cat << EOF > "$STEAMROOT/Switchdeck/switchdeck-add-game"
+#!/bin/sh
+TARGET_ITEM="\$1"
+[ -z "\$TARGET_ITEM" ] && exit 1
+if ! ps ax | grep -q 'steamrtarm64/[s]team'; then
+    kdialog --title Error --error "Require the Steam to be active."
+    exit 1
+fi
+encodedUrl="steam://addnonsteamgame/\$(python3 -c "import urllib.parse; print(urllib.parse.quote(\\"\$TARGET_ITEM\\", safe=''))")"
+touch /tmp/addnonsteamgamefile
+xdg-open \$encodedUrl
+bn=\$(basename "\$TARGET_ITEM")
+kdialog --passivepopup "\$bn has been added to Steam." 5
+EOF
+        cat > "$KDE_MENU_DIR/addtosteam.desktop" <<EOF
+[Desktop Entry]
+Type=Service
+ServiceTypes=KonqPopupMenu/Plugin
+MimeType=application/x-executable;application/x-desktop;
+Actions=addToSteam
+X-KDE-Priority=TopLevel
+Icon=$STEAMROOT/public/steam_tray_48.tga
+
+[Desktop Action addToSteam]
+Exec=$STEAMROOT/Switchdeck/switchdeck-add-game %f
+Icon=$STEAMROOT/public/steam_tray_48.tga
+Name=Add to Steam
+EOF
+        chmod +x "$STEAMROOT/Switchdeck/switchdeck-add-game" "$KDE_MENU_DIR/addtosteam.desktop"
+    fi
+
+    chmod +x "$DESKTOP_FILE"
+    ln -fs "$DESKTOP_FILE" "$DESKTOP_DIR/steam.desktop"
+    update-desktop-database "$MENU_DIR" 2>/dev/null
+
+    # just to be safe
+	chmod -R +x "$STEAMROOT"
 
     printf "\nInstallation complete!\n"
     printf "To launch Steam, use the provided desktop shortcuts\n"
