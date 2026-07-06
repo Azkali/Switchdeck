@@ -123,11 +123,13 @@ CEF_DUMMY="${CEF_PATH}.dummy"
 
 # check for updates, spawn terminal
 ONLINE=0
+# Check if online and lock file is older than 60 min or missing to reduce github api calls
 if [ "$UPDATE_CHECK" = "true" ] && [ ! -t 0 ]; then
-    if ping -q -c 1 -W 2 8.8.8.8 &>/dev/null; then
-        ONLINE=1
+    if [ ! -f "$SWITCHDECK_DIR/.update.lock" ] || [ -n "$(find "$SWITCHDECK_DIR/.update.lock" -mmin +60 2>/dev/null)" ]; then
+        ping -q -c 1 -W 2 8.8.8.8 &>/dev/null && ONLINE=1
     fi
 fi
+
 if [ "$ONLINE" -eq 1 ]; then
     UPDATE_CMD="source '$STEAMROOT/update-switchdeck.sh'; sleep 1; [[ '$STEAMROOT/launch-steam.sh' -nt '$0' || '$STEAMROOT/update-switchdeck.sh' -nt '$0' ]] && exit 0"
     if command -v konsole >/dev/null 2>&1; then
@@ -137,11 +139,10 @@ if [ "$ONLINE" -eq 1 ]; then
     elif command -v xterm >/dev/null 2>&1; then
         xterm -e bash -c "$UPDATE_CMD"
     fi
+    touch "$SWITCHDECK_DIR/.update.lock"
 fi
-if [[ "$STEAMROOT/launch-steam.sh" -nt "$0" ]]; then
-    exec "$0" "$@"
-fi
-if [[ "$STEAMROOT/update-switchdeck.sh" -nt "$0" ]]; then
+
+if [[ "$STEAMROOT/launch-steam.sh" -nt "$0" ]] || [[ "$STEAMROOT/update-switchdeck.sh" -nt "$0" ]]; then
     exec "$0" "$@"
 fi
 
