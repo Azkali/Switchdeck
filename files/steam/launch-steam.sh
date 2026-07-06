@@ -123,8 +123,8 @@ CEF_DUMMY="${CEF_PATH}.dummy"
 
 # check for updates, spawn terminal
 ONLINE=0
-# Check if online and lock file is older than 60 min or missing to reduce github api calls
-if [ "$UPDATE_CHECK" = "true" ] && [ ! -t 0 ]; then
+# Only check if online, every 60min and if steam is not running
+if [ "$UPDATE_CHECK" = "true" ] && [ ! -t 0 ] && ! pidof steam >/dev/null 2>&1; then
     if [ ! -f "$SWITCHDECK_DIR/.update.lock" ] || [ -n "$(find "$SWITCHDECK_DIR/.update.lock" -mmin +60 2>/dev/null)" ]; then
         ping -q -c 1 -W 2 8.8.8.8 &>/dev/null && ONLINE=1
     fi
