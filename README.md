@@ -40,10 +40,11 @@
 
 ## Information
 * [Game compatibility list](https://docs.google.com/spreadsheets/d/1UrLwRaIZGAL6J7l9QK_DO4MB45KzIUKIfKZIOE4hid4). Not every title is supported or fully playable.
+* Use the square [taskbar icon](https://drive.google.com/file/d/1ciiL1fqIvq2lNtDRZEdrBAeOh0wa03Ds/view?usp=sharing) to change your [OC Profile](https://wiki.switchroot.org/wiki/linux/linux-features#power-profiles-all-models). OC CPU should be enough for most games.
 * Several launch commands are defined in `launch-steam.sh`. Feel free to tweak them to fit your needs. Changing `STEAMDECK_MODE="false"` to `true` at the top enables steamdeck / big picture mode.
 * `wineesync` causes crashes with DXVK and is disabled in `launch-steam.sh`.
-* [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos/releases), [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom) and [Luxtorpeda](https://luxtorpeda.org/) can be used as well. Some games may only work with [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom).
-* [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek) and an old version of [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v2.3.1) are patched in to Proton because Nintendo Switch only supports up to Vulkan 1.2.
+* [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos/releases), [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom) and [Luxtorpeda](https://luxtorpeda.org/) are supported. Some games may only work with [GE-Proton](https://github.com/gloriouseggroll/proton-ge-custom).
+* [ProtonPlus](https://github.com/Vysp3r/ProtonPlus) can be used to install custom Proton versions. You can download and install the latest aarch64 release [here](https://github.com/Vysp3r/ProtonPlus/actions/workflows/main.yml). Only x86_64 Proton is supported, don't use aarch64/arm64 versions of Proton.
 
 ---
 
