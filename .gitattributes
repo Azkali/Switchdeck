@@ -3,3 +3,5 @@
 # don't break archive parts
 *.part* binary
 *.zip binary
+*.gz binary
+*.tar.* binary
