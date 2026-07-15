@@ -151,6 +151,51 @@ C0="$STEAMROOT/steamapps/compatdata/0"
 [[ -d "$C0" && ! -L "$C0" ]] && rm -rf "$C0"
 [[ ! -e "$C0" ]] && ln -s /dev/null "$C0"
 
+# Proton 11 (ARM64) ships its native arm64 Wine PE stack + bundled FEX built for
+# ARMv8.1-A (inline LSE atomics), which raise SIGILL on ARMv8.0-A CPUs that lack
+# LSE -- e.g. the Tegra X1 Cortex-A57 (Nintendo Switch). On such hosts, overlay an
+# ARMv8.0 rebuild so wine/dxvk/vkd3d/FEX run. No-op on ARMv8.1+ (LSE) devices.
+# Runs before the DXVK-Sarek and win32u patches below so they re-apply on top of
+# the overlaid files in the same launch.
+# https://github.com/Azkali/proton-arm64-a57
+if ! grep -qw atomics /proc/cpuinfo; then
+    P11_OVL_TAG="11.0-1-beta5-v80"
+    P11_OVL_URL="https://github.com/Azkali/proton-arm64-a57/releases/download/${P11_OVL_TAG}/proton11-arm64-v80-a57.tar.zst"
+    P11_VDF="$STEAMROOT/steamapps/libraryfolders.vdf"
+    # every Steam library (default root + libraryfolders.vdf entries)
+    { echo "$STEAMROOT"; [ -f "$P11_VDF" ] && grep -oE '"/[^"]+"' "$P11_VDF" | tr -d '"' | sort -u; } | while read -r lib; do
+        p_dir="$lib/steamapps/common/Proton 11.0 (ARM64)"
+        p="$p_dir/files"
+        [ -d "$p/lib/wine/aarch64-windows" ] || continue
+        P11_VER="$(cat "$p_dir/version" 2>/dev/null || echo unknown)"
+        [ "$(cat "$p_dir/.switchdeck-a57-overlay" 2>/dev/null)" = "${P11_OVL_TAG}:${P11_VER}" ] && continue
+        # GNU tar fails with EINVAL on current Fedora + the 4.9 kernel; prefer bsdtar
+        if command -v bsdtar >/dev/null; then
+            P11_TAR="bsdtar"
+        elif command -v zstd >/dev/null; then
+            P11_TAR="tar"
+        else
+            log "Proton 11 (ARM64) A57 overlay needs bsdtar or zstd; skipping"
+            break
+        fi
+        log "Applying ARMv8.0 (Cortex-A57) overlay to Proton 11.0 (ARM64)"
+        P11_TMP="$p_dir/.a57-overlay.tar.zst"
+        if wget -q -t 3 -O "$P11_TMP" "$P11_OVL_URL"; then
+            [ -f "$p_dir/.proton11-stock.tar" ] || $P11_TAR -cf "$p_dir/.proton11-stock.tar" -C "$p" bin-arm64 lib 2>/dev/null || true
+            if { [ "$P11_TAR" = "bsdtar" ] && bsdtar -xf "$P11_TMP" -C "$p"; } ||
+               { [ "$P11_TAR" = "tar" ] && zstd -dc "$P11_TMP" | tar -C "$p" -xf -; }; then
+                echo "${P11_OVL_TAG}:${P11_VER}" > "$p_dir/.switchdeck-a57-overlay"
+                log "Proton 11 (ARM64) overlay applied (A57-safe)"
+            else
+                log "WARN: Proton 11 (ARM64) overlay extraction failed"
+            fi
+        else
+            log "WARN: could not download Proton 11 (ARM64) A57 overlay"
+        fi
+        rm -f "$P11_TMP"
+    done
+fi
+
 # Patch both Native and GE-Proton with DXVK-Sarek and VKD3D v2.3.1
 DX_SRC="$SWITCHDECK_DIR/DXVK"
 VK_SRC="$SWITCHDECK_DIR/VKD3D"
